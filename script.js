@@ -1,268 +1,151 @@
-/* ═══════════════════════════════════════════════════════════
-   SALUBRA-KIN — script.js
-   Curevo-inspired interactions: navbar, accordion, counters,
-   fade-in, parallax hero, ticker
-═══════════════════════════════════════════════════════════ */
-
 document.addEventListener('DOMContentLoaded', () => {
 
-  /* ─────────────────────────────────────────────
-     1. NAVBAR — transparent → solid on scroll
-  ───────────────────────────────────────────── */
+  // 1. NAVBAR scroll
   const navbar = document.getElementById('navbar');
+  const onScroll = () => navbar.classList.toggle('scrolled', window.scrollY > 60);
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
 
-  const handleNavbarScroll = () => {
-    if (window.scrollY > 60) {
-      navbar.classList.add('scrolled');
-    } else {
-      navbar.classList.remove('scrolled');
-    }
-  };
-
-  window.addEventListener('scroll', handleNavbarScroll, { passive: true });
-  handleNavbarScroll(); // run once on load
-
-  /* ─────────────────────────────────────────────
-     2. HAMBURGER / MOBILE MENU
-  ───────────────────────────────────────────── */
+  // 2. HAMBURGER
   const hamburger = document.getElementById('hamburger');
   const mobileMenu = document.getElementById('mobileMenu');
-
   if (hamburger && mobileMenu) {
     hamburger.addEventListener('click', () => {
       hamburger.classList.toggle('open');
       mobileMenu.classList.toggle('open');
     });
-
-    // Close on link click
-    mobileMenu.querySelectorAll('a').forEach(link => {
-      link.addEventListener('click', () => {
-        hamburger.classList.remove('open');
-        mobileMenu.classList.remove('open');
-      });
-    });
+    mobileMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+      hamburger.classList.remove('open');
+      mobileMenu.classList.remove('open');
+    }));
   }
 
-  /* ─────────────────────────────────────────────
-     3. PARALLAX HERO background on scroll
-  ───────────────────────────────────────────── */
+  // 3. PARALLAX HERO
   const heroBg = document.getElementById('heroBg');
-
   if (heroBg) {
     window.addEventListener('scroll', () => {
-      const scrollY = window.scrollY;
-      const offset = scrollY * 0.35;
-      heroBg.style.transform = `translateY(${offset}px)`;
+      heroBg.style.transform = `translateY(${window.scrollY * 0.35}px)`;
     }, { passive: true });
   }
 
-  /* ─────────────────────────────────────────────
-     4. SCROLL FADE-IN (IntersectionObserver)
-        .fade-up elements slide up + fade in
-        Respects data-delay attribute (ms)
-  ───────────────────────────────────────────── */
-  const fadeElements = document.querySelectorAll('.fade-up');
-
-  const fadeObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const el = entry.target;
-        const delay = parseInt(el.dataset.delay || '0', 10);
-        setTimeout(() => {
-          el.classList.add('visible');
-        }, delay);
-        fadeObserver.unobserve(el);
+  // 4. FADE-UP
+  const fadeObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const delay = parseInt(e.target.dataset.delay || '0', 10);
+        setTimeout(() => e.target.classList.add('visible'), delay);
+        fadeObs.unobserve(e.target);
       }
     });
   }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+  document.querySelectorAll('.fade-up').forEach(el => fadeObs.observe(el));
 
-  fadeElements.forEach(el => fadeObserver.observe(el));
-
-  /* ─────────────────────────────────────────────
-     5. COUNTER ANIMATION
-        Counts up from 0 to data-target value
-        when element enters viewport
-        data-prefix / data-suffix supported
-  ───────────────────────────────────────────── */
-  const counters = document.querySelectorAll('.counter, .stat-number[data-target]');
-
-  const easeOutQuart = t => 1 - Math.pow(1 - t, 4);
-
+  // 5. COUNTER ANIMATION
+  const ease = t => 1 - Math.pow(1 - t, 4);
   const animateCounter = (el) => {
-    const target  = parseInt(el.dataset.target, 10);
-    const prefix  = el.dataset.prefix  || '';
-    const suffix  = el.dataset.suffix  || '';
-    const duration = 1800; // ms
-    let startTime = null;
-
-    const step = (timestamp) => {
-      if (!startTime) startTime = timestamp;
-      const elapsed = timestamp - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const easedProgress = easeOutQuart(progress);
-      const current = Math.round(easedProgress * target);
-      el.textContent = prefix + current + suffix;
-      if (progress < 1) {
-        requestAnimationFrame(step);
-      } else {
-        el.textContent = prefix + target + suffix;
-      }
+    const target = parseInt(el.dataset.target, 10);
+    const prefix = el.dataset.prefix || '';
+    const suffix = el.dataset.suffix || '';
+    let start = null;
+    const step = (ts) => {
+      if (!start) start = ts;
+      const p = Math.min((ts - start) / 1800, 1);
+      el.textContent = prefix + Math.round(ease(p) * target) + suffix;
+      if (p < 1) requestAnimationFrame(step);
+      else el.textContent = prefix + target + suffix;
     };
-
     requestAnimationFrame(step);
   };
-
-  const counterObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        animateCounter(entry.target);
-        counterObserver.unobserve(entry.target);
-      }
+  const counterObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { animateCounter(e.target); counterObs.unobserve(e.target); }
     });
   }, { threshold: 0.4 });
+  document.querySelectorAll('.counter, .stat-number[data-target]').forEach(el => counterObs.observe(el));
 
-  counters.forEach(el => counterObserver.observe(el));
-
-  /* ─────────────────────────────────────────────
-     6. ACCORDION — sticky process steps
-        One open at a time
-  ───────────────────────────────────────────── */
-  const accordionItems = document.querySelectorAll('.accordion-item');
-
-  accordionItems.forEach(item => {
+  // 6. ACCORDION
+  const items = document.querySelectorAll('.accordion-item');
+  items.forEach(item => {
     const header = item.querySelector('.accordion-header');
     if (!header) return;
-
     header.addEventListener('click', () => {
-      const isOpen = item.classList.contains('open');
-
-      // Close all
-      accordionItems.forEach(i => {
-        i.classList.remove('open');
-      });
-
-      // If it wasn't open, open it
-      if (!isOpen) {
-        item.classList.add('open');
-      }
+      const wasOpen = item.classList.contains('open');
+      items.forEach(i => i.classList.remove('open'));
+      if (!wasOpen) item.classList.add('open');
     });
   });
 
-  /* ─────────────────────────────────────────────
-     7. TICKER — duplicate content for seamless loop
-        The HTML already has items doubled;
-        this ensures the animation is correct.
-  ───────────────────────────────────────────── */
-  // The ticker CSS handles the animation via @keyframes.
-  // Pause on hover for accessibility.
-  const tickerInner = document.getElementById('ticker');
-  if (tickerInner) {
-    const tickerWrap = tickerInner.closest('.ticker-wrap');
-    if (tickerWrap) {
-      tickerWrap.addEventListener('mouseenter', () => {
-        tickerInner.style.animationPlayState = 'paused';
-      });
-      tickerWrap.addEventListener('mouseleave', () => {
-        tickerInner.style.animationPlayState = 'running';
-      });
+  // 7. TICKER pause on hover
+  const ticker = document.getElementById('ticker');
+  if (ticker) {
+    const wrap = ticker.closest('.ticker-wrap');
+    if (wrap) {
+      wrap.addEventListener('mouseenter', () => ticker.style.animationPlayState = 'paused');
+      wrap.addEventListener('mouseleave', () => ticker.style.animationPlayState = 'running');
     }
   }
 
-  /* ─────────────────────────────────────────────
-     8. STAGGERED CARD REVEAL
-        Cards within grids appear with stagger
-        when their container enters viewport
-  ───────────────────────────────────────────── */
-  const staggeredContainers = document.querySelectorAll(
-    '.services-grid, .avantages-grid, .tarifs-grid, .marche-grid, .about-pillars'
-  );
-
-  const staggerObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const children = entry.target.children;
-        Array.from(children).forEach((child, index) => {
-          // Only animate children that don't already have fade-up (avoid double)
+  // 8. STAGGER grids
+  const staggerObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        Array.from(e.target.children).forEach((child, i) => {
           if (!child.classList.contains('fade-up')) {
             child.style.opacity = '0';
             child.style.transform = 'translateY(24px)';
-            child.style.transition = `opacity 0.55s ease ${index * 80}ms, transform 0.55s ease ${index * 80}ms`;
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => {
-                child.style.opacity = '1';
-                child.style.transform = 'translateY(0)';
-              });
-            });
+            child.style.transition = `opacity 0.55s ease ${i*80}ms, transform 0.55s ease ${i*80}ms`;
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+              child.style.opacity = '1';
+              child.style.transform = 'translateY(0)';
+            }));
           }
         });
-        staggerObserver.unobserve(entry.target);
+        staggerObs.unobserve(e.target);
       }
     });
   }, { threshold: 0.10 });
+  document.querySelectorAll('.services-grid, .avantages-grid, .tarifs-grid, .marche-grid, .about-pillars')
+    .forEach(c => staggerObs.observe(c));
 
-  staggeredContainers.forEach(container => staggerObserver.observe(container));
-
-  /* ─────────────────────────────────────────────
-     9. SMOOTH SCROLL for anchor links
-  ───────────────────────────────────────────── */
-  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', (e) => {
-      const targetId = anchor.getAttribute('href');
-      if (targetId === '#') return;
-      const targetEl = document.querySelector(targetId);
-      if (!targetEl) return;
+  // 9. SMOOTH SCROLL
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const id = a.getAttribute('href');
+      if (id === '#') return;
+      const target = document.querySelector(id);
+      if (!target) return;
       e.preventDefault();
-      const navbarHeight = navbar ? navbar.offsetHeight : 0;
-      const targetTop = targetEl.getBoundingClientRect().top + window.scrollY - navbarHeight - 12;
-      window.scrollTo({ top: targetTop, behavior: 'smooth' });
+      const top = target.getBoundingClientRect().top + window.scrollY - (navbar ? navbar.offsetHeight : 0) - 12;
+      window.scrollTo({ top, behavior: 'smooth' });
     });
   });
 
-  /* ─────────────────────────────────────────────
-     10. CONTACT FORM — prevent default + feedback
-  ───────────────────────────────────────────── */
-  const contactForm = document.getElementById('contactForm');
-  if (contactForm) {
-    contactForm.addEventListener('submit', (e) => {
+  // 10. CONTACT FORM
+  const form = document.getElementById('contactForm');
+  if (form) {
+    form.addEventListener('submit', e => {
       e.preventDefault();
-      const submitBtn = contactForm.querySelector('.form-submit');
-      if (!submitBtn) return;
-
-      const originalHTML = submitBtn.innerHTML;
-      submitBtn.innerHTML = 'Message envoyé ✓';
-      submitBtn.style.background = '#2d6a4f';
-      submitBtn.disabled = true;
-
-      setTimeout(() => {
-        submitBtn.innerHTML = originalHTML;
-        submitBtn.style.background = '';
-        submitBtn.disabled = false;
-        contactForm.reset();
-      }, 3500);
+      const btn = form.querySelector('.form-submit');
+      if (!btn) return;
+      const orig = btn.innerHTML;
+      btn.innerHTML = 'Message envoyé ✓';
+      btn.style.background = '#2d6a4f';
+      btn.disabled = true;
+      setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; btn.disabled = false; form.reset(); }, 3500);
     });
   }
 
-  /* ─────────────────────────────────────────────
-     11. ACTIVE NAV LINK on scroll
-         Highlights the nav link for the
-         currently visible section
-  ───────────────────────────────────────────── */
+  // 11. ACTIVE NAV on scroll
   const sections = document.querySelectorAll('section[id]');
-  const navLinkEls = document.querySelectorAll('.nav-links a[href^="#"]');
-
-  const sectionObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const id = entry.target.getAttribute('id');
-        navLinkEls.forEach(link => {
-          link.style.color = link.getAttribute('href') === `#${id}`
-            ? 'var(--gold)'
-            : 'rgba(255,255,255,0.80)';
-        });
+  const navLinks = document.querySelectorAll('.nav-links a[href^="#"]');
+  const sectionObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const id = e.target.getAttribute('id');
+        navLinks.forEach(l => l.style.color = l.getAttribute('href') === `#${id}` ? 'var(--gold)' : 'rgba(255,255,255,0.80)');
       }
     });
   }, { threshold: 0.4 });
-
-  sections.forEach(section => sectionObserver.observe(section));
+  sections.forEach(s => sectionObs.observe(s));
 
 });

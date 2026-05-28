@@ -18,7 +18,7 @@
   <nav class="navbar" id="navbar">
     <div class="container nav-inner">
       <a href="#" class="nav-logo">
-        <div class="logo-mark">SK</div>
+        <img src="images/logo.jpg" alt="SALUBRA-KIN" class="logo-img" />
         <div class="logo-text">
           <span class="logo-name">SALUBRA-KIN</span>
           <span class="logo-sub">L'HÔPITAL DU BÂTIMENT</span>
@@ -52,7 +52,7 @@
        HERO
   ═══════════════════════════════════════════════ -->
   <section class="hero section-dark" id="home">
-    <div class="hero-parallax" id="heroBg"></div>
+    <div class="hero-parallax" id="heroBg" style="background-image: url('images/equipe-hero.png');"></div>
     <div class="hero-overlay"></div>
     <div class="container hero-inner">
       <div class="hero-content fade-up">
@@ -173,6 +173,20 @@
         </a>
       </div>
     </div>
+    <div class="about-photo-row fade-up" data-delay="200">
+      <div class="about-photo-wrap">
+        <img src="images/equipe-blanc.png" alt="Équipe SALUBRA-KIN en uniforme blanc" loading="lazy" />
+        <div class="about-photo-caption">L'équipe SALUBRA-KIN — Kinshasa, RDC</div>
+      </div>
+      <div class="about-photo-wrap">
+        <img src="images/building-care-hotel.png" alt="Service BUILDING-CARE — nettoyage hôtel" loading="lazy" />
+        <div class="about-photo-caption">BUILDING-CARE — Hôtel 5 étoiles, Kinshasa</div>
+      </div>
+      <div class="about-photo-wrap">
+        <img src="images/car-care-exterieur.png" alt="Service CAR-CARE — nettoyage véhicule" loading="lazy" />
+        <div class="about-photo-caption">CAR-CARE — Intervention on-site</div>
+      </div>
+    </div>
   </section>
 
   <!-- ═══════════════════════════════════════════════
@@ -193,6 +207,9 @@
 
         <!-- CAR-CARE -->
         <div class="service-card fade-up" data-delay="0">
+          <div class="service-img-wrap">
+            <img src="images/car-care-interieur.png" alt="CAR-CARE — nettoyage intérieur véhicule" loading="lazy" />
+          </div>
           <div class="service-icon-wrap">
             <div class="service-icon">🚗</div>
           </div>
@@ -218,6 +235,9 @@
 
         <!-- BUILDING-CARE -->
         <div class="service-card service-card--featured fade-up" data-delay="100">
+          <div class="service-img-wrap">
+            <img src="images/building-care-lobby.png" alt="BUILDING-CARE — nettoyage lobby hôtel" loading="lazy" />
+          </div>
           <div class="service-icon-wrap">
             <div class="service-icon">🏢</div>
           </div>
@@ -243,6 +263,9 @@
 
         <!-- DEEP 3D -->
         <div class="service-card fade-up" data-delay="200">
+          <div class="service-img-wrap">
+            <img src="images/deep3d-entrepot.png" alt="DEEP 3D — assainissement entrepôt" loading="lazy" />
+          </div>
           <div class="service-icon-wrap">
             <div class="service-icon">🔬</div>
           </div>
@@ -297,11 +320,16 @@
           </div>
           <div class="accordion-body">
             <div class="accordion-content">
-              <p>Notre équipe réalise un audit sanitaire complet de votre espace ou véhicule. Nous identifions les zones à risque, relevons les niveaux de contamination et établissons un score hygiénique initial.</p>
-              <div class="accordion-tags">
-                <span class="acc-tag">Audit visuel</span>
-                <span class="acc-tag">Prélèvements</span>
-                <span class="acc-tag">Score initial</span>
+              <div class="accordion-img-row">
+                <div class="accordion-text-block">
+                  <p>Notre équipe réalise un audit sanitaire complet de votre espace ou véhicule. Nous identifions les zones à risque, relevons les niveaux de contamination et établissons un score hygiénique initial.</p>
+                  <div class="accordion-tags">
+                    <span class="acc-tag">Audit visuel</span>
+                    <span class="acc-tag">Prélèvements</span>
+                    <span class="acc-tag">Score initial</span>
+                  </div>
+                </div>
+                <img src="images/deep3d-bureau.png" alt="Inspection SALUBRA-KIN" class="accordion-photo" loading="lazy" />
               </div>
             </div>
           </div>
@@ -339,11 +367,16 @@
           </div>
           <div class="accordion-body">
             <div class="accordion-content">
-              <p>Application du protocole de traitement adapté : désinfection, nébulisation, fumigation ou assainissement profond selon le diagnostic. Produits homologués OMS, techniciens certifiés.</p>
-              <div class="accordion-tags">
-                <span class="acc-tag">Produits OMS</span>
-                <span class="acc-tag">Techniciens certifiés</span>
-                <span class="acc-tag">Protocole adapté</span>
+              <div class="accordion-img-row">
+                <div class="accordion-text-block">
+                  <p>Application du protocole de traitement adapté : désinfection, nébulisation, fumigation ou assainissement profond selon le diagnostic. Produits homologués OMS, techniciens certifiés.</p>
+                  <div class="accordion-tags">
+                    <span class="acc-tag">Produits OMS</span>
+                    <span class="acc-tag">Techniciens certifiés</span>
+                    <span class="acc-tag">Protocole adapté</span>
+                  </div>
+                </div>
+                <img src="images/deep3d-cuisine.png" alt="Traitement SALUBRA-KIN cuisine" class="accordion-photo" loading="lazy" />
               </div>
             </div>
           </div>
@@ -697,6 +730,48 @@
   </section>
 
   <!-- ═══════════════════════════════════════════════
+       GALERIE PHOTO
+  ═══════════════════════════════════════════════ -->
+  <section class="section-light gallery-section">
+    <div class="container">
+      <div class="section-header fade-up">
+        <div class="section-tag">
+          <span class="tag-icon">◈</span> NOS ÉQUIPES EN ACTION
+        </div>
+        <h2 class="display-title section-title">
+          SALUBRA-KIN sur le <em>terrain</em>
+        </h2>
+      </div>
+    </div>
+    <div class="gallery-grid">
+      <div class="gallery-item gallery-item--tall fade-up" data-delay="0">
+        <img src="images/building-care-bureau.png" alt="Désinfection bureau Kinshasa" loading="lazy" />
+        <div class="gallery-caption">BUILDING-CARE — Bureau</div>
+      </div>
+      <div class="gallery-item fade-up" data-delay="80">
+        <img src="images/car-care-exterieur.png" alt="Nettoyage véhicule extérieur" loading="lazy" />
+        <div class="gallery-caption">CAR-CARE — Extérieur</div>
+      </div>
+      <div class="gallery-item fade-up" data-delay="160">
+        <img src="images/building-care-hotel.png" alt="SALUBRA-KIN hôtel Kinshasa" loading="lazy" />
+        <div class="gallery-caption">BUILDING-CARE — Hôtel</div>
+      </div>
+      <div class="gallery-item gallery-item--wide fade-up" data-delay="100">
+        <img src="images/equipe-blanc.png" alt="Équipe SALUBRA-KIN uniformes blancs" loading="lazy" />
+        <div class="gallery-caption">L'équipe SALUBRA-KIN — Kinshasa, RDC</div>
+      </div>
+      <div class="gallery-item fade-up" data-delay="180">
+        <img src="images/deep3d-entrepot.png" alt="DEEP 3D entrepôt" loading="lazy" />
+        <div class="gallery-caption">DEEP 3D — Entrepôt industriel</div>
+      </div>
+      <div class="gallery-item fade-up" data-delay="240">
+        <img src="images/deep3d-cuisine.png" alt="DEEP 3D cuisine professionnelle" loading="lazy" />
+        <div class="gallery-caption">DEEP 3D — Cuisine professionnelle</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════
        CONTACT
   ═══════════════════════════════════════════════ -->
   <section class="section-light" id="contact">
@@ -782,7 +857,7 @@
     <div class="container footer-inner">
       <div class="footer-brand">
         <div class="footer-logo">
-          <div class="logo-mark">SK</div>
+          <img src="images/logo.jpg" alt="SALUBRA-KIN" class="logo-img" />
           <div class="logo-text">
             <span class="logo-name">SALUBRA-KIN</span>
             <span class="logo-sub">L'HÔPITAL DU BÂTIMENT</span>

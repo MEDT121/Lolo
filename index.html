@@ -50,12 +50,23 @@
 
   <!-- HERO -->
   <section class="hero" id="home">
-    <div class="hero-bg" id="heroBg" style="background-image:url('images/equipe-building.jpg');"></div>
+    <div class="hero-slideshow" id="heroSlideshow">
+      <div class="hero-slide active" style="background-image:url('images/equipe-building.jpg')"></div>
+      <div class="hero-slide" style="background-image:url('images/building-hotel-ext.jpg')"></div>
+      <div class="hero-slide" style="background-image:url('images/building-aeroport.jpg')"></div>
+      <div class="hero-slide" style="background-image:url('images/deep3d-fumigation-rue.jpg')"></div>
+      <div class="hero-slide" style="background-image:url('images/equipe-van.jpg')"></div>
+    </div>
     <div class="hero-overlay"></div>
     <div class="container hero-inner">
       <div class="hero-content fade-up">
-        <div class="section-tag light">
-          <span class="tag-icon">✦</span> PREMIER OPÉRATEUR CERTIFIÉ D'HYGIÈNE EN RDC
+        <div class="hero-badge-row">
+          <div class="section-tag light">
+            <span class="tag-icon">✦</span> PREMIER OPÉRATEUR CERTIFIÉ D'HYGIÈNE EN RDC
+          </div>
+          <div class="hero-location-badge">
+            <span>📍</span> Kinshasa, RDC
+          </div>
         </div>
         <h1 class="hero-title">
           SALUBRA-KIN<br><em>L'Hôpital du Bâtiment</em>
@@ -68,6 +79,13 @@
           <a href="#services" class="btn-pill">Découvrir nos services <span class="btn-arrow">→</span></a>
           <a href="#contact" class="btn-outline">Diagnostic gratuit <span>↓</span></a>
         </div>
+        <div class="hero-dots" id="heroDots">
+          <button class="hero-dot active" aria-label="Image 1"></button>
+          <button class="hero-dot" aria-label="Image 2"></button>
+          <button class="hero-dot" aria-label="Image 3"></button>
+          <button class="hero-dot" aria-label="Image 4"></button>
+          <button class="hero-dot" aria-label="Image 5"></button>
+        </div>
       </div>
       <div class="hero-stats fade-up" data-delay="200">
         <div class="stat-card">
@@ -76,7 +94,7 @@
         </div>
         <div class="stat-card">
           <span class="stat-number" data-target="6">0</span>
-          <span class="stat-label">Équipements detection</span>
+          <span class="stat-label">Équipements détection</span>
         </div>
         <div class="stat-card">
           <span class="stat-number" data-target="100" data-suffix="%">0</span>
@@ -87,6 +105,10 @@
           <span class="stat-label">Techniciens certifiés</span>
         </div>
       </div>
+    </div>
+    <div class="hero-scroll-hint">
+      <span class="scroll-hint-text">Défiler</span>
+      <div class="scroll-hint-arrow"></div>
     </div>
   </section>
 
@@ -725,24 +747,36 @@
         <div class="gallery-caption">CAR-CARE — Habitacle certifié</div>
       </div>
       <div class="gallery-item gallery-item--wide">
-        <img src="images/building-lobby3.jpg" alt="BUILDING-CARE lobby" loading="lazy" />
-        <div class="gallery-caption">BUILDING-CARE — Lobby hôtel</div>
+        <img src="images/building-hotel-ext.jpg" alt="Équipe nettoyage hôtel" loading="lazy" />
+        <div class="gallery-caption">BUILDING-CARE — Nettoyage extérieur hôtel</div>
       </div>
       <div class="gallery-item">
-        <img src="images/deep3d-desinfection.jpg" alt="DEEP 3D désinfection" loading="lazy" />
-        <div class="gallery-caption">DEEP 3D — Désinfection bureau</div>
+        <img src="images/building-aeroport.jpg" alt="Désinfection aéroport Kinshasa" loading="lazy" />
+        <div class="gallery-caption">BUILDING-CARE — Aéroport de Kinshasa</div>
       </div>
       <div class="gallery-item">
-        <img src="images/deep3d-kitchen2.jpg" alt="DEEP 3D cuisine" loading="lazy" />
-        <div class="gallery-caption">DEEP 3D — Cuisine industrielle</div>
+        <img src="images/building-residence.jpg" alt="Désinfection résidence" loading="lazy" />
+        <div class="gallery-caption">BUILDING-CARE — Résidence privée</div>
       </div>
       <div class="gallery-item">
-        <img src="images/building-lobby2.jpg" alt="BUILDING-CARE nettoyage" loading="lazy" />
-        <div class="gallery-caption">BUILDING-CARE — Nettoyage professionnel</div>
+        <img src="images/deep3d-deratisation.jpg" alt="Inspection dératisation" loading="lazy" />
+        <div class="gallery-caption">DEEP 3D — Inspection dératisation</div>
       </div>
       <div class="gallery-item">
-        <img src="images/deep3d-highrise.jpg" alt="DEEP 3D immeuble" loading="lazy" />
-        <div class="gallery-caption">DEEP 3D — Immeuble de bureaux</div>
+        <img src="images/deep3d-cuisine-pro.jpg" alt="DEEP 3D cuisine professionnelle" loading="lazy" />
+        <div class="gallery-caption">DEEP 3D — Cuisine professionnelle</div>
+      </div>
+      <div class="gallery-item">
+        <img src="images/building-fumigation-rue.jpg" alt="Fumigation rue Kinshasa" loading="lazy" />
+        <div class="gallery-caption">DEEP 3D — Fumigation voie publique</div>
+      </div>
+      <div class="gallery-item gallery-item--wide">
+        <img src="images/collage-interventions.jpg" alt="Interventions SALUBRA-KIN" loading="lazy" />
+        <div class="gallery-caption">SALUBRA-KIN — Toutes nos interventions</div>
+      </div>
+      <div class="gallery-item">
+        <img src="images/deep3d-fumigation-residence.jpg" alt="Fumigation résidence" loading="lazy" />
+        <div class="gallery-caption">DEEP 3D — Fumigation résidence</div>
       </div>
       <div class="gallery-item">
         <img src="images/deep3d-warehouse.jpg" alt="DEEP 3D entrepôt" loading="lazy" />
@@ -863,6 +897,15 @@
       </div>
     </div>
   </footer>
+
+  <!-- FLOATING CTA -->
+  <a href="#contact" class="float-cta" id="floatCta" aria-label="Diagnostic gratuit">
+    <span class="float-cta-icon">💬</span>
+    <span class="float-cta-label">Diagnostic gratuit</span>
+  </a>
+
+  <!-- BACK TO TOP -->
+  <button class="back-to-top" id="backToTop" aria-label="Retour en haut">↑</button>
 
   <script src="script.js"></script>
 </body>

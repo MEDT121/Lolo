@@ -20,11 +20,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }));
   }
 
-  // 3. PARALLAX HERO
-  const heroBg = document.getElementById('heroBg');
-  if (heroBg) {
+  // 3. HERO SLIDESHOW + PARALLAX
+  const heroSlideshow = document.getElementById('heroSlideshow');
+  const heroSlides = heroSlideshow ? Array.from(heroSlideshow.querySelectorAll('.hero-slide')) : [];
+  const heroDotEls = Array.from(document.querySelectorAll('#heroDots .hero-dot'));
+  let activeSlide = 0;
+  let slideshowTimer;
+
+  const switchToSlide = (n) => {
+    heroSlides[activeSlide]?.classList.remove('active');
+    heroDotEls[activeSlide]?.classList.remove('active');
+    activeSlide = (n + heroSlides.length) % heroSlides.length;
+    heroSlides[activeSlide]?.classList.add('active');
+    heroDotEls[activeSlide]?.classList.add('active');
+  };
+
+  if (heroSlides.length > 1) {
+    slideshowTimer = setInterval(() => switchToSlide(activeSlide + 1), 5500);
+    heroDotEls.forEach((dot, i) => {
+      dot.addEventListener('click', () => {
+        clearInterval(slideshowTimer);
+        switchToSlide(i);
+        slideshowTimer = setInterval(() => switchToSlide(activeSlide + 1), 5500);
+      });
+    });
+  }
+
+  if (heroSlideshow) {
     window.addEventListener('scroll', () => {
-      heroBg.style.transform = `translateY(${window.scrollY * 0.35}px)`;
+      heroSlideshow.style.transform = `translateY(${window.scrollY * 0.35}px)`;
     }, { passive: true });
   }
 
@@ -104,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }, { threshold: 0.10 });
-  document.querySelectorAll('.services-grid, .avantages-grid, .tarifs-grid, .marche-grid, .about-pillars')
+  document.querySelectorAll('.innov-grid, .clients-grid, .avantages-grid, .about-pillars')
     .forEach(c => staggerObs.observe(c));
 
   // 9. SMOOTH SCROLL
@@ -147,5 +171,37 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }, { threshold: 0.4 });
   sections.forEach(s => sectionObs.observe(s));
+
+  // 12. FLOATING CTA + BACK TO TOP
+  const floatCta = document.getElementById('floatCta');
+  const backToTop = document.getElementById('backToTop');
+  window.addEventListener('scroll', () => {
+    const pastHero = window.scrollY > window.innerHeight * 0.65;
+    if (floatCta) floatCta.classList.toggle('visible', pastHero);
+    if (backToTop) backToTop.classList.toggle('visible', window.scrollY > 500);
+  }, { passive: true });
+  if (backToTop) {
+    backToTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+  }
+
+  // 13. GALLERY STAGGER on scroll
+  const galleryObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        Array.from(e.target.querySelectorAll('.gallery-item')).forEach((item, i) => {
+          item.style.opacity = '0';
+          item.style.transform = 'scale(0.95) translateY(20px)';
+          item.style.transition = `opacity 0.6s ease ${i*60}ms, transform 0.6s ease ${i*60}ms`;
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            item.style.opacity = '1';
+            item.style.transform = 'scale(1) translateY(0)';
+          }));
+        });
+        galleryObs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.05 });
+  const galleryGrid = document.querySelector('.gallery-grid');
+  if (galleryGrid) galleryObs.observe(galleryGrid);
 
 });

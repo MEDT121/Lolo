@@ -2,26 +2,30 @@
 
 // Navbar scroll effect
 const navbar = document.getElementById('navbar');
-window.addEventListener('scroll', () => {
-  navbar.classList.toggle('scrolled', window.scrollY > 50);
-});
+if (navbar) {
+  window.addEventListener('scroll', () => {
+    navbar.classList.toggle('scrolled', window.scrollY > 50);
+  });
+}
 
 // Hamburger menu
 const hamburger = document.getElementById('hamburger');
 const mobileMenu = document.getElementById('mobileMenu');
-hamburger.addEventListener('click', () => {
-  mobileMenu.classList.toggle('open');
-});
-mobileMenu.querySelectorAll('a').forEach(a => {
-  a.addEventListener('click', () => mobileMenu.classList.remove('open'));
-});
+if (hamburger && mobileMenu) {
+  hamburger.addEventListener('click', () => {
+    mobileMenu.classList.toggle('open');
+  });
+  mobileMenu.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => mobileMenu.classList.remove('open'));
+  });
+}
 
-// Fade-in on scroll
+// Fade-in on scroll — exclude .target-item (many are above-fold, would flash invisible)
 const observer = new IntersectionObserver((entries) => {
   entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
 }, { threshold: 0.12 });
 
-document.querySelectorAll('.pillar-card, .sub-card, .process-step, .cible-card, .dim-card, .marche-stat, .stat-card, .target-item, .tarif-card').forEach(el => {
+document.querySelectorAll('.pillar-card, .sub-card, .process-step, .cible-card, .dim-card, .marche-stat, .stat-card, .tarif-card').forEach(el => {
   el.classList.add('fade-in');
   observer.observe(el);
 });
@@ -30,15 +34,16 @@ document.querySelectorAll('.pillar-card, .sub-card, .process-step, .cible-card, 
 function drawChart() {
   const canvas = document.getElementById('revenueChart');
   if (!canvas) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  if (rect.width === 0) return;
+
   const ctx = canvas.getContext('2d');
 
   const months = ['M1','M2','M3','M4','M5','M6','M7','M8','M9','M10','M11','M12','M13','M14','M15','M16','M17','M18'];
   const revenues = [3000,7000,11238,18000,20578,22000,26000,28000,30000,32000,33000,35000,38000,40000,42000,44000,44508,44508];
-  const charges = Array(18).fill(8650);
-  const breakeven = Array(18).fill(8650);
 
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.parentElement.getBoundingClientRect();
   canvas.width = rect.width * dpr;
   canvas.height = 280 * dpr;
   canvas.style.width = rect.width + 'px';
@@ -134,32 +139,33 @@ function drawChart() {
 window.addEventListener('load', drawChart);
 window.addEventListener('resize', drawChart);
 
-// Contact form
+// Contact form — use CSS class for state so background restoration is reliable
 const form = document.getElementById('contactForm');
 if (form) {
   form.addEventListener('submit', e => {
     e.preventDefault();
     const btn = form.querySelector('.btn-submit');
     btn.textContent = 'Demande envoyée ✓';
-    btn.style.background = 'linear-gradient(135deg, #38A169, #276749)';
+    btn.classList.add('btn-submit--success');
     btn.disabled = true;
     setTimeout(() => {
       btn.textContent = 'Envoyer ma demande';
-      btn.style.background = '';
+      btn.classList.remove('btn-submit--success');
       btn.disabled = false;
       form.reset();
     }, 4000);
   });
 }
 
-// Smooth scroll offset for fixed nav
+// Smooth scroll offset for fixed nav — guard against bare href="#" (querySelector('#') throws SyntaxError)
 document.querySelectorAll('a[href^="#"]').forEach(a => {
   a.addEventListener('click', e => {
-    const target = document.querySelector(a.getAttribute('href'));
+    const href = a.getAttribute('href');
+    if (!href || href === '#') return;
+    const target = document.querySelector(href);
     if (target) {
       e.preventDefault();
-      const offset = 80;
-      window.scrollTo({ top: target.offsetTop - offset, behavior: 'smooth' });
+      window.scrollTo({ top: target.offsetTop - 80, behavior: 'smooth' });
     }
   });
 });

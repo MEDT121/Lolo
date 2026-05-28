@@ -46,11 +46,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  if (heroSlideshow) {
-    window.addEventListener('scroll', () => {
-      heroSlideshow.style.transform = `translateY(${window.scrollY * 0.35}px)`;
-    }, { passive: true });
-  }
 
   // 4. FADE-UP
   const fadeObs = new IntersectionObserver((entries) => {

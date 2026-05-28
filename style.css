@@ -197,24 +197,18 @@ section { padding: 96px 0; }
   position: absolute;
   inset: 0;
   overflow: hidden;
-  will-change: transform;
 }
 .hero-slide {
   position: absolute;
-  inset: -80px;
+  inset: 0;
   background-size: cover;
-  background-position: center 30%;
+  background-position: center center;
   background-repeat: no-repeat;
   opacity: 0;
   transition: opacity 1.4s ease;
 }
 .hero-slide.active {
   opacity: 1;
-  animation: kenBurns 8s ease-out forwards;
-}
-@keyframes kenBurns {
-  from { transform: scale(1.0); }
-  to   { transform: scale(1.07); }
 }
 
 .hero-overlay {

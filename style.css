@@ -486,6 +486,17 @@ section { padding: 96px 0; }
 .acc-text { flex: 1; }
 .acc-photo { width: 200px; height: 140px; object-fit: cover; border-radius: 12px; flex-shrink: 0; }
 
+/* ── FAQ LIGHT VARIANT ── */
+.accordion-light .accordion-item { border-bottom-color: var(--border-light); }
+.accordion-light .acc-num { color: rgba(28,43,94,0.15); }
+.accordion-light .acc-step { color: var(--muted); }
+.accordion-light .acc-title { color: var(--navy); }
+.accordion-light .acc-chevron { border-color: var(--border-light); color: var(--muted); }
+.accordion-light .accordion-content p { color: var(--muted); }
+.accordion-light .accordion-item.open .acc-num,
+.accordion-light .accordion-item.open .acc-step { color: var(--gold); }
+.accordion-light .accordion-item.open .acc-chevron { border-color: var(--gold); color: var(--navy); }
+
 /* ═══════════════════════════════════════════════
    STATS
 ═══════════════════════════════════════════════ */
@@ -620,6 +631,71 @@ section { padding: 96px 0; }
   transform: translateY(100%); transition: transform 0.35s;
 }
 .gallery-item:hover .gallery-caption { transform: translateY(0); }
+
+/* ── LIGHTBOX ── */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(28,43,94,0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+  backdrop-filter: blur(8px);
+}
+.lightbox.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.lightbox-content {
+  max-width: 100%;
+  max-height: 100%;
+  position: relative;
+  transform: scale(0.9);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.lightbox.active .lightbox-content {
+  transform: scale(1);
+}
+.lightbox-img {
+  max-width: 100%;
+  max-height: 90vh;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  border: 2px solid rgba(255,255,255,0.1);
+}
+.lightbox-close {
+  position: absolute;
+  top: -50px;
+  right: 0;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 2.5rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 10px;
+  transition: color 0.2s, transform 0.2s;
+}
+.lightbox-close:hover {
+  color: var(--gold);
+  transform: scale(1.1);
+}
+.lightbox-caption {
+  position: absolute;
+  bottom: -40px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
 
 /* ═══════════════════════════════════════════════
    CONTACT

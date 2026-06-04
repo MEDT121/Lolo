@@ -82,15 +82,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }, { threshold: 0.4 });
   document.querySelectorAll('.counter, .stat-number[data-target]').forEach(el => counterObs.observe(el));
 
-  // 6. ACCORDION
-  const items = document.querySelectorAll('.accordion-item');
-  items.forEach(item => {
-    const header = item.querySelector('.accordion-header');
-    if (!header) return;
-    header.addEventListener('click', () => {
-      const wasOpen = item.classList.contains('open');
-      items.forEach(i => i.classList.remove('open'));
-      if (!wasOpen) item.classList.add('open');
+  // 6. ACCORDION (Methods & FAQ)
+  const accordions = document.querySelectorAll('.accordion');
+  accordions.forEach(acc => {
+    const items = acc.querySelectorAll('.accordion-item');
+    items.forEach(item => {
+      const header = item.querySelector('.accordion-header');
+      if (!header) return;
+      header.addEventListener('click', () => {
+        const isOpen = item.classList.contains('open');
+        // Close other items in the same accordion
+        items.forEach(i => i.classList.remove('open'));
+        // Toggle current
+        if (!isOpen) item.classList.add('open');
+      });
     });
   });
 
@@ -198,5 +203,44 @@ document.addEventListener('DOMContentLoaded', () => {
   }, { threshold: 0.05 });
   const galleryGrid = document.querySelector('.gallery-grid');
   if (galleryGrid) galleryObs.observe(galleryGrid);
+
+  // 14. LIGHTBOX
+  const galleryItems = document.querySelectorAll('.gallery-item');
+  const lightbox = document.getElementById('lightbox');
+  const lightboxImg = lightbox ? lightbox.querySelector('.lightbox-img') : null;
+  const lightboxCap = lightbox ? lightbox.querySelector('.lightbox-caption') : null;
+  const lightboxClose = lightbox ? lightbox.querySelector('.lightbox-close') : null;
+
+  if (galleryItems.length > 0 && lightbox && lightboxImg) {
+    galleryItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const img = item.querySelector('img');
+        const cap = item.querySelector('.gallery-caption');
+        if (img) {
+          lightboxImg.src = img.src;
+          lightboxImg.alt = img.alt;
+          if (lightboxCap) {
+            lightboxCap.textContent = cap ? cap.textContent : '';
+          }
+          lightbox.classList.add('active');
+          document.body.style.overflow = 'hidden'; // Empêcher le scroll
+        }
+      });
+    });
+
+    const closeLightbox = () => {
+      lightbox.classList.remove('active');
+      document.body.style.overflow = '';
+      setTimeout(() => { lightboxImg.src = ''; }, 400); // Reset src après l'animation
+    };
+
+    lightboxClose.addEventListener('click', closeLightbox);
+    lightbox.addEventListener('click', (e) => {
+      if (e.target === lightbox) closeLightbox();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && lightbox.classList.contains('active')) closeLightbox();
+    });
+  }
 
 });

@@ -2798,9 +2798,16 @@ async function _pullSheets() {
         const key      = _SB_KEY_MAP[tbl];
         const convert  = _fromSB[tbl] || (x => x);
         const local    = DB._g(key) || [];
+        // Ids ayant une modification locale pas encore poussée vers Supabase :
+        // sans cette exclusion, un pull qui arrive avant que la file d'attente
+        // ait fini de pousser récupère l'ancienne version côté serveur et
+        // écrase silencieusement l'édition locale en attente (elle finit par
+        // repartir une fois la file traitée, mais l'utilisateur voit sa
+        // modification disparaître temporairement de l'écran entre-temps).
+        const queuedIds= new Set(_qGet().filter(q => q.tbl === tbl && (q.status === 'pending' || q.status === 'sending')).map(q => String(q.data?.id || '')).filter(Boolean));
         const sbIds    = new Set(rows.map(r => String(r.id || '')).filter(Boolean));
-        const localOnly= local.filter(x => x.id && !sbIds.has(String(x.id)));
-        const merged   = [...rows.map(convert).filter(r => r.id), ...localOnly];
+        const localOnly= local.filter(x => x.id && (!sbIds.has(String(x.id)) || queuedIds.has(String(x.id))));
+        const merged   = [...rows.map(convert).filter(r => r.id && !queuedIds.has(String(r.id))), ...localOnly];
         if (merged.length > 0) DB.replaceAll(key, merged);
         updated++;
       } catch(e) {

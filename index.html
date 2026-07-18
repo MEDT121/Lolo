@@ -448,7 +448,7 @@ textarea.inp{resize:vertical;min-height:80px}
 .stg-row:last-child{border-bottom:none}
 .stg-row:active{background:var(--gold-pale)}
 .stg-lbl{font-size:14px;font-weight:500}
-/* ── GAS Connection Wizard ── */
+/* ── Assistant de connexion Supabase ── */
 .gs-step-pill{flex:1;text-align:center;padding:7px 2px;font-size:10px;font-weight:700;border-radius:8px;cursor:pointer;color:var(--muted);background:var(--bg3);border:1px solid var(--gold-border);transition:all .25s;font-family:monospace;user-select:none}
 .gs-step-pill.active{background:var(--gold);color:#000;border-color:var(--gold)}
 .gs-step-panel{display:none}
@@ -1080,7 +1080,7 @@ textarea.inp{resize:vertical;min-height:80px}
     <!-- SETTINGS -->
     <div class="panel" id="panel-settings">
       <div id="profile-settings-card"></div>
-      <!-- Google Sheets section (Admin) -->
+      <!-- Section Supabase (Admin) -->
       <div id="admin-supabase-section" style="display:none">
         <div class="sec-lbl">☁️ Supabase — Base de données cloud</div>
         <div class="stg-card">
@@ -1113,10 +1113,10 @@ textarea.inp{resize:vertical;min-height:80px}
       </div>
 
       <div id="drive-photos-card" style="display:none">
-        <div class="sec-lbl">📸 Photos Google Drive</div>
+        <div class="sec-lbl">📸 Photos Supabase Storage</div>
         <div class="stg-card">
           <div class="stg-row" style="flex-direction:column;align-items:flex-start;gap:6px">
-            <div class="stg-lbl">Photos clients stockées sur Drive</div>
+            <div class="stg-lbl">Photos clients stockées sur Supabase</div>
             <div id="drive-photo-status" style="font-size:12px;color:var(--muted)">—</div>
           </div>
         </div>
@@ -1809,7 +1809,7 @@ textarea.inp{resize:vertical;min-height:80px}
   </div>
 </div>
 
-<div id="toast"></div><div id="fb-secret-box" style="display:none"></div><div id="fb-secret-val" style="display:none"></div>
+<div id="toast"></div>
 
 <div id="ov-sh-gsheets" class="sheet-ov" onclick="closeSheet('sh-gsheets')" style="display:none"></div>
 <div class="sheet" id="sh-gsheets" style="max-height:96vh;overflow-y:auto;padding-bottom:32px">
@@ -2250,9 +2250,9 @@ function avH(photo, name, size=50, radius=12){
   const isDrive = photo && photo.startsWith('http');
   const isB64   = photo && photo.startsWith('data:');
   const hasPhoto = isDrive || isB64;
-  // Indicateur cloud discret (coin bas-droit) : ☁️ si Drive, ⏱ si local en attente
+  // Indicateur cloud discret (coin bas-droit) : ☁️ si sur Supabase, ⏱ si local en attente
   const badge = isDrive
-    ? `<span style="position:absolute;bottom:1px;right:1px;font-size:${Math.max(8,Math.round(size*.18))}px;line-height:1;opacity:.85" title="Photo sur Google Drive">☁️</span>`
+    ? `<span style="position:absolute;bottom:1px;right:1px;font-size:${Math.max(8,Math.round(size*.18))}px;line-height:1;opacity:.85" title="Photo sur Supabase">☁️</span>`
     : '';
   if(hasPhoto){
     return `<div class="av" style="position:relative;width:${size}px;height:${size}px;border-radius:${radius}px;overflow:hidden;background:#1a1208">` +
@@ -2356,113 +2356,56 @@ function renderDossiersAdmin(){ if(typeof renderDossiers==='function') renderDos
 // ════════════════════════════════════════════════════════════════════════════
 
 // ══════════════════════════════════════════════
-// GOOGLE DRIVE — UPLOAD/DELETE PHOTOS
+// PHOTOS — UPLOAD VERS SUPABASE STORAGE
 // ══════════════════════════════════════════════
-
-// ════════════════════════════════════════════════════════════════════════════
-//  ZALAVRAI — GESTION PHOTOS GOOGLE DRIVE v10
-//  Photos compressées (400×400 JPEG 72%) → stockées sur Google Drive
-//  URL Drive (80 chars) sauvée dans localStorage au lieu du base64 (30KB)
-//  Mode offline → base64 local avec migration auto au retour en ligne
-// ════════════════════════════════════════════════════════════════════════════
-
-// ── Uploader une photo base64 compressée vers Google Drive via GAS ────────────
-// Retourne { url, fileId } si succès, ou null si hors-ligne / GAS non configuré
-window.uploadPhotoToDrive = async function(base64Data, entityId, filename) {
-  const gasUrl = getGsUrl();
-  if (!gasUrl || !base64Data) return null;
-  if (!base64Data.startsWith('data:')) return null;
-  const kb = Math.round(base64Data.length * 3/4 / 1024);
-
-  // Retry 2x avec timeout 30s
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 30000);
-      const resp = await fetch(gasUrl, {
-        method : 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        signal : ctrl.signal,
-        body   : JSON.stringify({
-          action  : 'uploadPhoto',
-          base64  : base64Data,
-          filename: filename || ('photo_' + entityId + '.jpg'),
-          entityId: entityId || ''
-        })
-      });
-      clearTimeout(timer);
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      const data = JSON.parse(await resp.text());
-      if (data.ok && data.url) {
-        console.log('[Drive] ✅ Photo uploadée:', data.url, '('+kb+'KB)');
-        return { url: data.url, fileId: data.fileId };
-      }
-      throw new Error(data.error || 'Réponse invalide');
-    } catch (e) {
-      console.warn('[Drive] Tentative '+(attempt+1)+' échouée:', e.message);
-      if (attempt === 0) await new Promise(r => setTimeout(r, 2000)); // attendre 2s avant retry
-    }
-  }
-  return null; // Les 2 tentatives ont échoué → fallback base64
-};
-
-// ── Supprimer une photo Drive via fileId ──────────────────────────────────────
-window.deletePhotoFromDrive = async function(fileId) {
-  const gasUrl = getGsUrl();
-  if (!gasUrl || !fileId) return;
-  if (!fileId.startsWith('http') && fileId.length < 10) return;
-  try {
-    await fetch(gasUrl, {
-      method : 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body   : JSON.stringify({ action: 'deletePhoto', fileId })
-    });
-  } catch (e) { console.warn('[Drive] Delete échoué:', e.message); }
-};
+//  Photos compressées (400×400 JPEG 72%) → stockées sur Supabase Storage
+//  (bucket "zalavrai-photos"). URL publique (~80 chars) sauvée dans
+//  localStorage au lieu du base64 (~30KB). Mode offline → base64 local
+//  avec migration auto au retour en ligne. Upload réel : _uploadPhotoSB()
+//  (plus haut dans ce fichier), appelée via le wrapper _uploadPhotoToStorage.
 
 // ── Résoudre l'URL d'une photo pour l'affichage ───────────────────────────────
-// Accepte : URL Drive, URL http, base64, ou chaîne vide
+// Accepte : URL Supabase Storage, URL http, base64, ou chaîne vide
 window.resolvePhoto = function(photo) {
   if (!photo || photo.length < 5) return null;
-  return photo; // Drive URL ou base64 : les deux fonctionnent en <img src="">
+  return photo; // URL Storage ou base64 : les deux fonctionnent en <img src="">
 };
 
 // ── Préparer une photo avant sauvegarde ──────────────────────────────────────
-// Flux : base64 → compresser si nécessaire → uploader Drive → retourner URL
-// Si Drive indisponible → retourner base64 compressé (fallback offline)
+// Flux : base64 → compresser si nécessaire → uploader vers Supabase Storage → retourner URL
+// Si Storage indisponible → retourner base64 compressé (fallback offline)
 window.preparePhotoForSave = async function(photoValue, entityId) {
   if (!photoValue) return '';
 
-  // ✅ Déjà une URL Drive → rien à faire
+  // ✅ Déjà une URL (Storage ou autre) → rien à faire
   if (photoValue.startsWith('http')) return photoValue;
 
   if (photoValue.startsWith('data:')) {
-    const gasUrl = getGsUrl();
-    if (gasUrl && navigator.onLine) {
+    if (_SB_CONNECTED && navigator.onLine) {
       const kb = Math.round(photoValue.length*3/4/1024);
-      toast('☁️ Upload Drive… ('+kb+'KB)');
+      toast('☁️ Upload photo… ('+kb+'KB)');
       try {
-        const result = await uploadPhotoToDrive(photoValue, entityId);
+        const result = await _uploadPhotoToStorage(photoValue, entityId);
         if (result && result.url) {
-          toast('✅ Photo sauvegardée sur Google Drive');
-          return result.url; // ✅ URL Drive remplace base64
+          toast('✅ Photo sauvegardée sur Supabase');
+          return result.url; // ✅ URL Storage remplace base64
         }
       } catch (e) {
-        console.warn('[Drive] Upload échoué:', e.message);
+        console.warn('[Storage] Upload échoué:', e.message);
       }
-      toast('⚠️ Drive indisponible — photo gardée localement');
+      toast('⚠️ Upload indisponible — photo gardée localement');
     } else if (!navigator.onLine) {
       // Mettre en queue pour upload dès que reconnecté
       _addPhotoToQueue(entityId, photoValue);
     }
-    // Fallback : base64 compressé (offline ou GAS non configuré)
+    // Fallback : base64 compressé (offline ou Supabase non connecté)
     return photoValue;
   }
 
   return photoValue;
 };
 
-// ── Queue de photos en attente d'upload Drive ─────────────────────────────────
+// ── Queue de photos en attente d'upload ───────────────────────────────────────
 // Stockée en localStorage chiffré, retentée dès reconnexion
 const _PHOTO_Q_KEY = '_zlv_phq';
 function _addPhotoToQueue(entityId, base64) {
@@ -2472,8 +2415,8 @@ function _addPhotoToQueue(entityId, base64) {
     const q   = raw ? JSON.parse(_dec(raw)) : {};
     q[entityId] = { base64, ts: Date.now() };
     localStorage.setItem(_PHOTO_Q_KEY, _enc(JSON.stringify(q)));
-    console.log('[Drive Queue] Photo mise en queue:', entityId);
-  } catch(e) { console.warn('[Drive Queue] Erreur queue:', e.message); }
+    console.log('[Photo Queue] Photo mise en queue:', entityId);
+  } catch(e) { console.warn('[Photo Queue] Erreur queue:', e.message); }
 }
 function _getPhotoQueue() {
   try {
@@ -2493,20 +2436,19 @@ function _removeFromPhotoQueue(entityId) {
 
 // ── Retry automatique des photos en queue (appelé sur reconnexion) ────────────
 window._retryPhotoQueue = async function() {
-  const gasUrl = getGsUrl();
-  if (!gasUrl || !navigator.onLine) return;
+  if (!_SB_CONNECTED || !navigator.onLine) return;
   const q = _getPhotoQueue();
   const ids = Object.keys(q);
   if (!ids.length) return;
 
-  console.log('[Drive Queue] Retry', ids.length, 'photos en attente...');
+  console.log('[Photo Queue] Retry', ids.length, 'photos en attente...');
   let ok = 0;
   for (const entityId of ids) {
     const {base64} = q[entityId];
     try {
-      const result = await uploadPhotoToDrive(base64, entityId);
+      const result = await _uploadPhotoToStorage(base64, entityId);
       if (result && result.url) {
-        // Mettre à jour le client en localStorage ET envoyer vers Sheets
+        // Mettre à jour le client en localStorage ET pousser vers Supabase
         const c = DB.clients().find(x => x.id === entityId);
         if (c) {
           DB.updClient(entityId, { photo: result.url });
@@ -2520,27 +2462,26 @@ window._retryPhotoQueue = async function() {
         _removeFromPhotoQueue(entityId);
         ok++;
       }
-    } catch(e) { console.warn('[Drive Queue] Retry échoué pour', entityId, e.message); }
+    } catch(e) { console.warn('[Photo Queue] Retry échoué pour', entityId, e.message); }
   }
   if (ok > 0) {
-    toast('☁️ '+ok+' photo(s) uploadée(s) sur Drive');
+    toast('☁️ '+ok+' photo(s) uploadée(s)');
     renderCurrent();
   }
 };
 
-// ── Migrer les base64 existants vers Drive en arrière-plan ───────────────────
+// ── Migrer les base64 existants vers Supabase Storage en arrière-plan ────────
 // Appelé automatiquement lors de la synchronisation
 window._migratePhotosToD = async function() {
-  const gasUrl = getGsUrl();
-  if (!gasUrl || !navigator.onLine) {
-    toast('⚠️ Connexion requise pour la migration Drive');
+  if (!_SB_CONNECTED || !navigator.onLine) {
+    toast('⚠️ Connexion requise pour la migration des photos');
     return;
   }
 
   const clients = DB.clients().filter(c=>c.photo&&c.photo.startsWith('data:')&&c.photo.length>500);
   const users   = DB.users().filter(u=>u.photo&&u.photo.startsWith('data:')&&u.photo.length>500);
   const total   = clients.length + users.length;
-  if (!total) { toast('✅ Toutes les photos sont déjà sur Drive'); return; }
+  if (!total) { toast('✅ Toutes les photos sont déjà sur Supabase'); return; }
 
   toast('⏳ Migration '+total+' photo(s)…');
   let migrated=0, failed=0;
@@ -2549,7 +2490,7 @@ window._migratePhotosToD = async function() {
   for (let i=0; i<clients.length; i++) {
     const c=clients[i];
     try {
-      const result = await uploadPhotoToDrive(c.photo, c.id);
+      const result = await _uploadPhotoToStorage(c.photo, c.id);
       if (result && result.url) {
         DB.updClient(c.id, { photo: result.url });
         pC({ ...c, photo: result.url });
@@ -2562,7 +2503,7 @@ window._migratePhotosToD = async function() {
   // Migrer photos utilisateurs
   for (const u of users) {
     try {
-      const result = await uploadPhotoToDrive(u.photo, u.id);
+      const result = await _uploadPhotoToStorage(u.photo, u.id);
       if (result && result.url) {
         DB.updUser(u.id, { photo: result.url });
         migrated++;
@@ -2571,7 +2512,7 @@ window._migratePhotosToD = async function() {
   }
 
   const msg = migrated>0
-    ? '☁️ '+migrated+' photo(s) migrée(s) sur Drive'+(failed>0?' · '+failed+' échec(s)':'')
+    ? '☁️ '+migrated+' photo(s) migrée(s) sur Supabase'+(failed>0?' · '+failed+' échec(s)':'')
     : '⚠️ Migration échouée — vérifiez la connexion';
   toast(msg);
   if (migrated>0) renderCurrent();
@@ -2579,11 +2520,9 @@ window._migratePhotosToD = async function() {
 };
 
 // ════════════════════════════════════════════════════════════════════════════
-// ZALAVRAI — MOTEUR SYNC v10  ·  Architecture Tampon Production
-// ════════════════════════════════════════════════════════════════════════════
-//
-//  ÉCRITURE : Action → localStorage (chiffré) → Queue → Batch → GAS → Sheets
-//  LECTURE  : gviz/tq JSONP (zéro CORS, zéro GAS requis)
+//  ZALAVRAI — MOTEUR SYNC SUPABASE
+//  Architecture : localStorage (chiffré) → Queue persistante → Batch → API
+//  REST Supabase. Lecture par pull périodique fusionné avec le local.
 //
 //  Fonctionnalités :
 //  ✅ Queue persistante chiffrée (survit crashes + coupures réseau)
@@ -2594,14 +2533,7 @@ window._migratePhotosToD = async function() {
 //  ✅ Retry exponentiel : 1s → 2s → 4s → 8s → 16s (5 tentatives max)
 //  ✅ Détection réseau (navigator.onLine + probe fetch)
 //  ✅ Statut temps réel sur 4 profils + Settings
-//  ✅ Stockage local chiffré XOR+base64 INTACT
-// ════════════════════════════════════════════════════════════════════════════
-
-// ── Constantes ────────────────────────────────────────────────────────────────
-// ════════════════════════════════════════════════════════════════════════════
-//  ZALAVRAI — MOTEUR SYNC SUPABASE v1.0
-//  Architecture : localStorage offline → Queue → Supabase REST API
-//  Remplacement complet de Google Sheets / Apps Script
+//  ✅ Stockage local chiffré XOR+base64
 // ════════════════════════════════════════════════════════════════════════════
 
 // ── Constantes queue ─────────────────────────────────────────────────────────
@@ -2623,12 +2555,6 @@ let _syncInterval = null;
 let _isSyncing    = false;
 let _batchTimer   = null;
 
-// Aliases compatibilité ancienne API
-Object.defineProperty(window,'_GS_CONNECTED',{get:()=>_SB_CONNECTED,set:v=>{_SB_CONNECTED=v;},configurable:true});
-Object.defineProperty(window,'_FB_CONNECTED',{get:()=>_SB_CONNECTED,set:v=>{_SB_CONNECTED=v;},configurable:true});
-Object.defineProperty(window,'GS_URL',{get:()=>SB_URL,set:v=>{SB_URL=v;},configurable:true});
-Object.defineProperty(window,'FB_URL',{get:()=>SB_URL,set:v=>{SB_URL=v;},configurable:true});
-
 // ── Connexion Supabase par défaut (clé anon — publique par conception, ─────────
 //    protégée par les policies RLS, pas par le secret) ────────────────────────
 const _SB_DEFAULT_URL = 'https://xsaqmhkdsfwvaizdshpm.supabase.co';
@@ -2641,17 +2567,8 @@ function getSbUrl()  { try{ if(localStorage.getItem('_sb_disabled')==='1')return
 function setSbUrl(u) { try{if(u){localStorage.setItem('_sb_url',_enc(u));localStorage.removeItem('_sb_disabled');}else{localStorage.removeItem('_sb_url');localStorage.setItem('_sb_disabled','1');}}catch{} }
 function getSbKey()  { try{ if(localStorage.getItem('_sb_disabled')==='1')return ''; return _dec(localStorage.getItem('_sb_key'))||_SB_DEFAULT_KEY; }catch{return _SB_DEFAULT_KEY;} }
 function setSbKey(k) { try{if(k){localStorage.setItem('_sb_key',_enc(k));localStorage.removeItem('_sb_disabled');}else{localStorage.removeItem('_sb_key');localStorage.setItem('_sb_disabled','1');}}catch{} }
-// Aliases pour compatibilité
-function getGsUrl()  { return getSbUrl(); }
-function setGsUrl(u) { setSbUrl(u); }
-function getGsShid() { return getSbUrl(); }
-function setGsShid(u){ setSbUrl(u); }
-function getFbUrl()  { return getSbUrl(); }
-function setFbUrl(u) { setSbUrl(u); }
-function extractSheetId(input){ return input||''; }
 
-// ── Mapping tables : noms dans Supabase ───────────────────────────────────────
-// Tables Supabase (snake_case, mêmes noms que les feuilles GAS)
+// ── Mapping tables : noms dans Supabase (snake_case) ──────────────────────────
 const _SB_TABLES = {
   utilisateurs : { pk:'id' },
   clients      : { pk:'id' },
@@ -2757,14 +2674,6 @@ const _SB_KEY_MAP = {
   utilisateurs:'_zlv_u', clients:'_zlv_c', ventes:'_zlv_v',
   paiements:'_zlv_p', stock:'_zlv_s', signalements:'_zlv_sg'
 };
-
-// Alias _GS_TABLES pour compatibilité (fonctions qui y référencent)
-const _GS_TABLES = Object.keys(_SB_TABLES).map(name=>({
-  name,
-  toGS:   _toSB[name]   || (x=>x),
-  fromGS: _fromSB[name] || (x=>x),
-}));
-const _GS_KEY_MAP = _SB_KEY_MAP;
 
 // ════════════════════════════════════════════════════════════════════════════
 //  REQUÊTE SUPABASE REST API
@@ -2999,21 +2908,6 @@ async function pushAll() {
   await processOutbox();
 }
 
-// DELETE via Supabase (alias _fbReq pour compatibilité)
-function _fbReq(method, path, data) {
-  if (method === 'DELETE' && _SB_CONNECTED && !_SB_RO_ONLY) {
-    const parts = path.split('/').filter(Boolean);
-    const table = parts[0], id = parts[1];
-    if (table && id) _sbDelete(table, id).catch(() => {});
-  }
-  return Promise.resolve(null);
-}
-// Alias _gasReq → no-op (compatibilité)
-async function _gasReq(action, payload) {
-  console.warn('[COMPAT] _gasReq appelé — migré vers Supabase. Action:', action);
-  return null;
-}
-
 // ════════════════════════════════════════════════════════════════════════════
 //  PUSH ALIASES — pU / pC / pV / pP / pS / pSig
 // ════════════════════════════════════════════════════════════════════════════
@@ -3147,7 +3041,7 @@ window._uploadPhotoToStorage = async function(base64Data, entityId) {
 //  INIT — Connexion Supabase au login
 // ════════════════════════════════════════════════════════════════════════════
 
-async function initGoogleSheets() {
+async function initSupabase() {
   SB_URL = getSbUrl() || '';
   SB_KEY = getSbKey() || '';
   _SB_RO_ONLY  = !SB_KEY;
@@ -3164,7 +3058,8 @@ async function initGoogleSheets() {
     }).catch(() => {});
   }
 
-  // Flush outbox + pull initial
+  // Flush outbox + pull initial (détecte aussi les tables manquantes /
+  // clé invalide via window._lastPullError, voir _pullSheets)
   try { await processOutbox(); } catch(e) {}
   setTimeout(async () => {
     try {
@@ -3173,9 +3068,6 @@ async function initGoogleSheets() {
     } catch(e) {}
   }, 1500);
 }
-
-async function initSupabase() { await initGoogleSheets(); }
-async function initFirebase() { await initGoogleSheets(); }
 
 // ════════════════════════════════════════════════════════════════════════════
 //  PANNEAU CONNEXION — saveGSheets / gsInitSheets / disconnect
@@ -3410,11 +3302,6 @@ function _sbShowResult(title, detail, type) {
   el.innerHTML = `<div style="font-weight:700;font-size:13px;color:${col.title};margin-bottom:6px">${title}</div><div style="font-size:12px;color:var(--muted2);line-height:1.8">${detail}</div>`;
 }
 
-// Initialiser les tables Supabase (via SQL exécuté manuellement)
-window.gsInitSheets = async () => {
-  toast('ℹ️ Tables Supabase à créer via SQL — voir le fichier schema.sql à la racine du dépôt');
-};
-
 window.disconnectFirebase = window.disconnectGS = () => {
   if (!confirm('Déconnecter Supabase ?\nLes données restent sauvegardées localement.')) return;
   setSbUrl(''); setSbKey('');
@@ -3472,7 +3359,7 @@ window.syncNow = async (fromBtn) => {
 
 window.syncDossiers = async()=>{
   toast('🔄 Actualisation…');
-  if(_GS_CONNECTED){ try{ await pullAll(); renderDossiers(); } catch{ renderDossiers(); } }
+  if(_SB_CONNECTED){ try{ await pullAll(); renderDossiers(); } catch{ renderDossiers(); } }
   else renderDossiers();
 };
 
@@ -3742,7 +3629,7 @@ window.doLogout=()=>{
   SESSION=null;
   sessionStorage.removeItem(_SESS_KEY);
   clearTimeout(_inactivityTimer);
-  _FB_CONNECTED=false;FB_URL='';
+  _SB_CONNECTED=false;SB_URL='';
   document.getElementById('app-screen').classList.remove('active');
   document.getElementById('login-screen').classList.add('active');
   document.getElementById('app-nav').innerHTML='';
@@ -4211,7 +4098,7 @@ window.executeDeleteUser=async()=>{
   if(!PENDING_DEL)return;
   // Supprimer localement + sync Supabase
   DB.delUser(PENDING_DEL);
-  if(_SB_CONNECTED){ try{ await _fbReq('DELETE','/utilisateurs/'+PENDING_DEL); }catch(e){ console.warn('[deleteUser] Supabase sync failed',e); } }
+  if(_SB_CONNECTED){ try{ await _sbDelete('utilisateurs',PENDING_DEL); }catch(e){ console.warn('[deleteUser] Supabase sync failed',e); } }
   PENDING_DEL=null;
   closeConfirm();renderUsers();toast('🗑️ Profil supprimé');
 };
@@ -4240,7 +4127,7 @@ window.updateMyPhoto=async input=>{
     DB.updUser(u.id,{photo:finalPhoto});
     await pU({...u,photo:finalPhoto});
     setHdrAv({...u,photo:finalPhoto});
-    toast(finalPhoto.startsWith('http')?'✅ Photo enregistrée sur Google Drive !':'✅ Photo mise à jour (locale)');
+    toast(finalPhoto.startsWith('http')?'✅ Photo enregistrée sur Supabase !':'✅ Photo mise à jour (locale)');
   };
   img.src=objUrl;
 };
@@ -5798,20 +5685,33 @@ window.applyCorrection=async()=>{
   }else if(type==='stock_del'){
     const all=DB.stock().filter(x=>x.id!==refId);
     DB._s(K.S,all);
-    if(_FB_CONNECTED)_fbReq('DELETE','/stock/'+refId).catch(()=>{});
+    if(_SB_CONNECTED)_sbDelete('stock',refId).catch(()=>{});
   }else if(type==='vente_del'){
+    // Capturer les paiements liés AVANT suppression locale (delVente les
+    // retire de la base locale en cascade) pour pouvoir aussi les
+    // supprimer côté Supabase — sinon ils restent orphelins dans le cloud.
+    const payIds=DB.pays().filter(p=>p.venteID===refId).map(p=>p.id);
     DB.delVente(refId);
-    if(_FB_CONNECTED)_fbReq('DELETE','/ventes/'+refId).catch(()=>{});
-    if(_FB_CONNECTED)_fbReq('DELETE','/paiements/'+refId).catch(()=>{});
+    if(_SB_CONNECTED){
+      _sbDelete('ventes',refId).catch(()=>{});
+      payIds.forEach(pid=>_sbDelete('paiements',pid).catch(()=>{}));
+    }
   }else if(type==='client_del'){
     const vIds=DB.ventes().filter(x=>x.clientID===refId).map(x=>x.id);
+    // Capturer les paiements liés à CHAQUE vente avant suppression locale
+    // en cascade, pour les supprimer aussi côté Supabase (même raison que
+    // vente_del ci-dessus).
+    const payIds=DB.pays().filter(p=>vIds.includes(p.venteID)).map(p=>p.id);
     vIds.forEach(vid=>DB.delVente(vid));
     DB.delClient(refId);
-    if(_FB_CONNECTED)_fbReq('DELETE','/clients/'+refId).catch(()=>{});
-    if(_FB_CONNECTED){vIds.forEach(vid=>_fbReq('DELETE','/ventes/'+vid).catch(()=>{}));}
+    if(_SB_CONNECTED){
+      _sbDelete('clients',refId).catch(()=>{});
+      vIds.forEach(vid=>_sbDelete('ventes',vid).catch(()=>{}));
+      payIds.forEach(pid=>_sbDelete('paiements',pid).catch(()=>{}));
+    }
   }else if(type==='pay_del'){
     DB.delPay(refId);
-    if(_FB_CONNECTED)_fbReq('DELETE','/paiements/'+refId).catch(()=>{});
+    if(_SB_CONNECTED)_sbDelete('paiements',refId).catch(()=>{});
   }
   // Résoudre le signalement s'il existe
   if(sigId&&sigId!=='null'&&sigId!=='undefined'&&sigId){
@@ -7259,17 +7159,27 @@ window.archiverVentesAnciennes=async function(mois=6){
   const aArchiver=ventes.filter(v=>(v.dateCreation||v.dateFin||'')<limite && v.statut!=='encours');
   if(!aArchiver.length){toast('✅ Aucune vente à archiver (< '+mois+' mois)');return;}
   // Compresser avec LZW
-  const compressed=lzwEncode(JSON.stringify(aArchiver));
+  const raw=JSON.stringify(aArchiver);
+  const compressed=lzwEncode(raw);
+  const tauxCompression=Math.round((1-compressed.length/raw.length)*100);
   const archive={
     id:uid('ARC'),
     typeDonnee:'ventes',
+    label:'Ventes',
     periode:'before-'+limite.split('T')[0],
+    cutoff:limite.split('T')[0],
     nbLignes:aArchiver.length,
-    tailleOctets:JSON.stringify(aArchiver).length,
-    tauxCompression:Math.round((1-compressed.length/JSON.stringify(aArchiver).length)*100),
+    tailleOriginale:raw.length,
+    tailleCompresse:compressed.length,
+    tauxCompression:Math.max(0,tauxCompression),
     donneesCompressees:compressed,
-    dateArchivage:new Date().toISOString()
+    archiveLe:new Date().toISOString(),
+    archivePar:SESSION.username
   };
+  // Sauvegarder la sauvegarde compressée AVANT de retirer les ventes de la
+  // liste active — sinon les données sont perdues sans être récupérables
+  // (bug corrigé : l'archive n'était jamais persistée auparavant).
+  saveLocalArchives([...getLocalArchives(), archive]);
   // Garder seulement les ventes récentes en actif
   const aGarder=ventes.filter(v=>!aArchiver.find(a=>a.id===v.id));
   DB.replaceAll(K.V,aGarder);
@@ -7277,12 +7187,6 @@ window.archiverVentesAnciennes=async function(mois=6){
     description:'Archive '+aArchiver.length+' ventes ('+archive.tauxCompression+'% compression)',
     statut:'ok',dateCreation:new Date().toISOString(),dateResolution:''});
   toast('🗜️ '+aArchiver.length+' ventes archivées ('+archive.tauxCompression+'% compression) !');
-  // Aussi archiver côté GAS si connecté
-  if(_GS_CONNECTED){
-    try{
-      if(GS_URL) await _gasReq('archive_ventes',{mois:mois});
-    }catch(e){console.warn('[Archive GAS]',e);}
-  }
   renderCurrent();
 };
 
@@ -8299,22 +8203,21 @@ function renderSettings(){
     }
   }
 
-  // Indicateur Drive Photos
+  // Indicateur Photos Supabase Storage
   const driveCard=document.getElementById('drive-photos-card');
-  if(driveCard) driveCard.style.display=isAdmin&&getGsUrl()?'block':'none';
+  if(driveCard) driveCard.style.display=isAdmin&&_SB_CONNECTED?'block':'none';
   const driveEl=document.getElementById('drive-photo-status');
   if(driveEl){
-    const gasUrl=getGsUrl();
     const allClients=DB.clients();
     const withDrive=allClients.filter(c=>c.photo&&c.photo.startsWith('http')).length;
     const withB64  =allClients.filter(c=>c.photo&&c.photo.startsWith('data:')).length;
     const withNone =allClients.filter(c=>!c.photo||c.photo.length<10).length;
     const queueSize=Object.keys(_getPhotoQueue()).length;
-    if(!gasUrl){
-      driveEl.innerHTML=`<div style="color:var(--muted);font-size:12px">⚫ Configurez l'URL GAS pour activer Google Drive Photos</div>`;
+    if(!_SB_CONNECTED){
+      driveEl.innerHTML=`<div style="color:var(--muted);font-size:12px">⚫ Connectez Supabase pour activer le stockage des photos</div>`;
     } else {
       const parts=[];
-      if(withDrive>0) parts.push(`<span style="color:#22c55e;font-weight:600">☁️ ${withDrive} sur Drive</span>`);
+      if(withDrive>0) parts.push(`<span style="color:#22c55e;font-weight:600">☁️ ${withDrive} sur Supabase</span>`);
       if(withB64>0)   parts.push(`<span style="color:#f59e0b">🖼 ${withB64} locales (à migrer)</span>`);
       if(withNone>0)  parts.push(`<span style="color:var(--muted)">${withNone} sans photo</span>`);
       if(queueSize>0) parts.push(`<span style="color:#f87171">⏱ ${queueSize} en attente upload</span>`);
@@ -9170,21 +9073,10 @@ window.lancerArchivage=async(auto=false)=>{
       archivePar:SESSION.username
     };
 
-    // Sauvegarder localement
+    // Sauvegarder localement (les archives sont uniquement locales — pas
+    // de table Supabase dédiée, voir schema.sql)
     archives.push(archiveEntry);
-
-    // Push vers Firebase si connecté
-    if(_FB_CONNECTED){
-      try{
-        const archObj={id:archId,type_donnee:tbl.name,periode,nb_lignes:old.length,taille_octets:compressed.length,taux_compression:Math.max(0,taux),donnees_compressees:compressed,archive_le:new Date().toISOString(),archive_par:SESSION.username};
-        await _fbReq('PATCH','/archives/'+archId,archObj);
-        addArchLog(`  ✅ ${tbl.label}: ${old.length} lignes → Firebase`,'ok');
-      }catch(e){
-        addArchLog(`  ⚠️ ${tbl.label}: erreur GAS — ${e.message||'?'}`,'warn');
-      }
-    } else {
-      addArchLog(`  📦 ${tbl.label}: ${old.length} lignes archivées localement`,'ok');
-    }
+    addArchLog(`  📦 ${tbl.label}: ${old.length} lignes archivées localement`,'ok');
 
     // Supprimer du localStorage local aussi (garder les récents)
     const keep=all.filter(item=>{
@@ -9330,7 +9222,6 @@ window.restaurerArchive=id=>{
 window.supprimerArchive=async id=>{
   const archives=getLocalArchives().filter(x=>x.id!==id);
   saveLocalArchives(archives);
-  if(_FB_CONNECTED){_fbReq('DELETE','/archives/'+id).catch(()=>{});}
   addArchLog(`🗑️ Archive ${id} supprimée définitivement`,'warn');
   renderArchives();
   toast('🗑️ Archive supprimée');

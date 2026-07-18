@@ -6629,6 +6629,18 @@ function _goldGrad(ctx, x1,y1,x2,y2){
 }
 
 // ── Dessiner la carte complète ────────────────────────────────────────────────
+// Tronque un texte pour qu'il tienne dans maxW, en ajoutant "…".
+// Réduit toujours la chaîne de base (jamais le "…" déjà ajouté) pour
+// garantir la terminaison de la boucle, même si un seul caractère
+// retiré ne suffit pas à passer sous maxW.
+function _fitText(ctx, text, maxW){
+  let val = String(text);
+  if (ctx.measureText(val).width <= maxW) return val;
+  let base = val;
+  while (base.length > 1 && ctx.measureText(base+'…').width > maxW) base = base.slice(0,-1);
+  return base + '…';
+}
+
 async function _drawCard(c, ctx, W, H) {
 
   // ─── Palette ───────────────────────────────────────────────────────────────
@@ -6714,13 +6726,23 @@ async function _drawCard(c, ctx, W, H) {
   ctx.restore();
   ctx.textBaseline = 'alphabetic';
 
-  // ── TITRE ZALAVRAI SYSTÉME ──────────────────────────────────────────────────
+  // ── TITRE ZALAVRAI SYSTÈME ──────────────────────────────────────────────────
   const TXT_X = W * 0.308;
-  // "ZALAVRAI SYSTÉME"
-  ctx.font      = `900 ${Math.round(W*0.074)}px "Arial Black",Arial,sans-serif`;
+  // "ZALAVRAI SYSTÈME" — taille réduite automatiquement si le texte déborde
+  // (la police "Arial Black" n'est pas toujours disponible, ex. Android,
+  // et le texte de secours peut être plus large)
+  const cardTitle = 'ZALAVRAI SYSTÈME';
+  let titleSize = Math.round(W*0.074);
+  const maxTitleW = W - TXT_X - W*0.025;
+  ctx.font = `900 ${titleSize}px "Arial Black",Arial,sans-serif`;
+  const titleW = ctx.measureText(cardTitle).width;
+  if (titleW > maxTitleW) {
+    titleSize = Math.floor(titleSize * maxTitleW / titleW);
+    ctx.font = `900 ${titleSize}px "Arial Black",Arial,sans-serif`;
+  }
   ctx.fillStyle = BLACK;
   ctx.textAlign = 'left';
-  ctx.fillText('ZALAVRAI SYSTÉME', TXT_X, H*0.087);
+  ctx.fillText(cardTitle, TXT_X, H*0.087);
   // "Carte de Membres"
   ctx.font      = `400 ${Math.round(W*0.038)}px Arial,sans-serif`;
   ctx.fillStyle = '#888888';
@@ -6815,10 +6837,11 @@ async function _drawCard(c, ctx, W, H) {
   const numSeq    = 'ZLV-' + String(Math.max(1,cIdx+1)).padStart(5,'0');
   const codeClient= String(Math.max(1,cIdx+1)).padStart(4,'0');
 
-  // QR d'abord (à droite)
-  const QR_SIZE = Math.round(W * 0.232);   // ~158px → bien scannable
+  // QR d'abord (à droite) — agrandi pour un scan rapide et fiable sur le
+  // terrain (carte usée, éclairage faible, caméra bas de gamme)
+  const QR_SIZE = Math.round(W * 0.312);   // ~212px → scan rapide même de loin
   const QR_PAD  = Math.round(W * 0.022);   // padding cadre blanc
-  const QR_X    = W * 0.702;               // position gauche du QR
+  const QR_X    = W * 0.965 - QR_PAD - QR_SIZE; // aligné sur la marge droite
   const INFO_Y0 = H * 0.548;               // ligne de départ infos
   const QR_Y    = INFO_Y0 - QR_PAD;
 
@@ -6877,7 +6900,7 @@ async function _drawCard(c, ctx, W, H) {
     {lbl:'Lieu :',        val:c.lieuActivite||'—'},
     ...(genreTxt?[{lbl:'Sexe :',val:genreTxt}]:[]),
     {lbl:'Actif depuis :',val:depuisVal},
-    {lbl:'Email :',       val:'zalavrai1@gmail.com', small:true},
+    ...(c.telephone?[{lbl:'Téléphone :',val:c.telephone, small:true}]:[]),
   ];
 
   const LBL_SIZE = Math.round(W*0.033);
@@ -6904,9 +6927,8 @@ async function _drawCard(c, ctx, W, H) {
     ctx.fillStyle = info.gold ? GOLD : BLACK;
 
     // Tronquer si trop long
-    let val = String(info.val);
     const maxW = INFO_MAXW - lblW - W*0.01;
-    while(ctx.measureText(val).width > maxW && val.length > 4) val = val.slice(0,-1)+'…';
+    const val = _fitText(ctx, info.val, maxW);
     ctx.fillText(val, INFO_X+lblW, y);
   });
 
@@ -6941,7 +6963,10 @@ async function _drawCard(c, ctx, W, H) {
     ctx.fillText(fl.lbl, INFO_X, y);
     const lw=ctx.measureText(fl.lbl).width;
     ctx.font=`700 ${FT_SB}px Arial,sans-serif`; ctx.fillStyle=BLACK;
-    ctx.fillText(fl.val, INFO_X+lw, y);
+    // Tronquer si trop long (ex: nom d'agent long)
+    const maxW=(W-INFO_X)-(INFO_X+lw)-W*0.01;
+    const val=_fitText(ctx, fl.val, maxW);
+    ctx.fillText(val, INFO_X+lw, y);
   });
 
   // ─── 9. BANDE SOMBRE + SLOGAN ──────────────────────────────────────────────

@@ -6368,13 +6368,18 @@ window.exportAgentCSV=async()=>{
   toast('📥 3 fichiers CSV enregistrés !');
 };
 
-window.exportAgentPDF=async()=>{
+window.exportAgentPDF=async(scope)=>{
   const u=SESSION.username, role=SESSION.role;
   const allV=DB.ventes(), allC=DB.clients(), allP=DB.pays(), allS=DB.stock();
-  const ventes  = role==='Admin'?allV:allV.filter(v=>v.agentUsername===u||v.venduPar===u);
-  const clients = role==='Admin'?allC:allC.filter(c=>c.agentUsername===u);
-  const pays    = role==='Admin'?allP:allP.filter(p=>p.agentUsername===u);
-  const stock   = role==='Admin'?allS:allS.filter(s=>s.sourceUsername===u||s.destUsername===u);
+  // scope==='equipe' (Manager) : inclure le Manager + tous ses agents — sinon
+  // ce PDF ne contenait que les ventes propres du Manager, en contradiction
+  // avec le bouton "Export PDF équipe" et le CSV équivalent (exportMgrEquipeCSV)
+  // qui, lui, incluait bien toute l'équipe.
+  const scopeUsers = (scope==='equipe'&&role==='Manager') ? [u,...getMgrAgents().map(a=>a.username)] : [u];
+  const ventes  = role==='Admin'?allV:allV.filter(v=>scopeUsers.includes(v.agentUsername)||scopeUsers.includes(v.venduPar));
+  const clients = role==='Admin'?allC:allC.filter(c=>scopeUsers.includes(c.agentUsername));
+  const pays    = role==='Admin'?allP:allP.filter(p=>scopeUsers.includes(p.agentUsername));
+  const stock   = role==='Admin'?allS:allS.filter(s=>scopeUsers.includes(s.sourceUsername)||scopeUsers.includes(s.destUsername));
   const totalEnc=pays.reduce((s,p)=>s+Number(p.montantPaye||0),0);
   const totalSolde=ventes.reduce((s,v)=>{const dp=pays.filter(p=>p.venteID===v.id).reduce((ss,pp)=>ss+Number(pp.montantPaye||0),0);return s+Math.max(0,Number(v.solde70||0)-dp);},0);
   const retards=ventes.filter(v=>{const dp=pays.filter(p=>p.venteID===v.id).reduce((ss,pp)=>ss+Number(pp.montantPaye||0),0);return Math.max(0,Number(v.solde70||0)-dp)>0&&today()>v.dateFin;});
@@ -6427,7 +6432,7 @@ window.exportAgentPDF=async()=>{
     pdf.setDrawColor(201,160,48);pdf.setLineWidth(1);pdf.line(0,34,pW,34);
     pdf.setFont('helvetica','bold');pdf.setFontSize(22);setG();pdf.text('ZALAVRAI',pM,16);
     pdf.setFontSize(8);setGD();pdf.text('SYSTEME COMMERCIAL',pM,23);
-    const rlbl=role==='Admin'?'RAPPORT ADMIN':role==='Manager'?'RAPPORT MANAGER':role==='CréateurCarte'?'RAPPORT CC':'RAPPORT AGENT';
+    const rlbl=role==='Admin'?'RAPPORT ADMIN':role==='Manager'?(scopeUsers.length>1?'RAPPORT ÉQUIPE':'RAPPORT MANAGER'):role==='CréateurCarte'?'RAPPORT CC':'RAPPORT AGENT';
     pdf.setFillColor(35,25,5);pdf.roundedRect(pW-pM-46,8,46,12,2,2,'F');
     pdf.setDrawColor(140,105,25);pdf.setLineWidth(.3);pdf.roundedRect(pW-pM-46,8,46,12,2,2,'S');
     pdf.setFont('helvetica','bold');pdf.setFontSize(7);setG();
@@ -8582,7 +8587,7 @@ window.exportAdminPDF=async()=>{ await window.exportAgentPDF(); };
 
 
 // ── Manager: Export PDF équipe ──
-window.exportMgrEquipePDF=async()=>{ await window.exportAgentPDF(); };
+window.exportMgrEquipePDF=async()=>{ await window.exportAgentPDF('equipe'); };
 
 // ── Manager: Export CSV complet équipe ──
 window.exportMgrEquipeCSV=async()=>{

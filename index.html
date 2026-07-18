@@ -623,7 +623,6 @@ textarea.inp{resize:vertical;min-height:80px}
 
     <!-- ADMIN: EQUIPE -->
     <div class="panel" id="panel-users">
-      <div class="sync-bar" style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0"><div class="s-dot" id="sdot-a"></div><span id="stxt-a" style="font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Mode hors ligne</span></div><button class="sync-btn btn" style="padding:5px 11px;font-size:11px;background:rgba(201,160,48,.1);border:1px solid rgba(201,160,48,.3);color:var(--gold);flex-shrink:0;white-space:nowrap" onclick="syncNow()">🔄 Sync</button></div>
       <div class="stats-grid">
         <div class="stat-c"><div class="stat-lbl">Utilisateurs</div><div class="stat-val" id="st-u-total">0</div></div>
         <div class="stat-c"><div class="stat-lbl">Agents actifs</div><div class="stat-val" id="st-u-agents">0</div></div>
@@ -5012,6 +5011,7 @@ function renderDashboardAdmin(){
   const el=document.getElementById('panel-admin-dashboard');
   if(!el)return;
   el.innerHTML=`
+    <div class="sync-bar" style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0"><div class="s-dot" id="sdot-a"></div><span id="stxt-a" style="font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Mode hors ligne</span></div><button class="sync-btn btn" style="padding:5px 11px;font-size:11px;background:rgba(201,160,48,.1);border:1px solid rgba(201,160,48,.3);color:var(--gold);flex-shrink:0;white-space:nowrap" onclick="syncNow()">🔄 Sync</button></div>
     <div class="sec-head"><div class="sec-title">📊 Dashboard du ${today_}</div></div>
     <div class="stats-grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px">
       <div class="stat-c" style="border:1px solid rgba(76,175,80,.25)"><div class="stat-lbl">💰 Encaissé aujourd'hui</div><div class="stat-val" style="color:var(--success);font-size:14px">${fmtFC(encAuj)}</div></div>

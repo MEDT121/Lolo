@@ -6130,6 +6130,20 @@ window.ncInitToggle=function(){
   function upd(){if(cb.checked){if(track)track.style.background='var(--success)';if(thumb)thumb.style.left='24px';}else{if(track)track.style.background='var(--border)';if(thumb)thumb.style.left='2px';}}
   cb.removeEventListener('change',upd);cb.addEventListener('change',upd);upd();
 };
+// Numéro de carte séquentiel, garanti unique même après suppression de
+// clients — DB.clients().length+1 (ancienne méthode) pouvait réattribuer
+// un numéro déjà utilisé par un client existant dès qu'un autre client
+// avait été supprimé entre-temps (ex: 5 clients, n°3 supprimé → le 6e
+// client créé recevait 4+1=5, en collision avec le client n°5 existant).
+// Un compteur persisté qui ne redescend jamais évite ce cas.
+function _nextCarteNum(){
+  const stored=parseInt(localStorage.getItem('_zlv_carte_seq')||'0',10)||0;
+  const maxExisting=DB.clients().reduce((m,c)=>Math.max(m,Number(c.carteNum)||0),0);
+  const next=Math.max(stored,maxExisting)+1;
+  localStorage.setItem('_zlv_carte_seq',String(next));
+  return next;
+}
+
 window.createClient=async()=>{
   const nom=document.getElementById('nc-nom').value.trim();
   const tel=(document.getElementById('nc-tel')?.value||'').trim();
@@ -6155,7 +6169,7 @@ window.createClient=async()=>{
     lieuActivite:lieu,activite:act,cin:cin,genre:genre,
     actif:actif,actifDepuis:actif?new Date().toISOString():'',
     dateCreation:new Date().toISOString(),carteCreee:'Non',carteData:'',
-    carteNum:DB.clients().length+1
+    carteNum:_nextCarteNum()
   };
 
   DB.addClient(c);await pC(c);
@@ -6766,12 +6780,15 @@ async function _drawCard(c, ctx, W, H) {
   // sont supprimés entre-temps. Pour les clients créés avant cette règle
   // (sans carteNum), on en attribue un maintenant et on le fige (persisté).
   if (!c.carteNum) {
-    const allCl = window.DB ? DB.clients() : [];
-    c.carteNum = Math.max(1, allCl.findIndex(x=>x.id===c.id) + 1);
-    try {
-      DB.updClient(c.id, {carteNum:c.carteNum});
-      if (typeof pC === 'function') pC({...c});
-    } catch(e) {}
+    if (window.DB) {
+      c.carteNum = _nextCarteNum();
+      try {
+        DB.updClient(c.id, {carteNum:c.carteNum});
+        if (typeof pC === 'function') pC({...c});
+      } catch(e) {}
+    } else {
+      c.carteNum = 1;
+    }
   }
   const numSeq    = 'ZLV-' + String(c.carteNum).padStart(5,'0');
   const codeClient= String(c.carteNum).padStart(4,'0');

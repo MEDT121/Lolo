@@ -7514,7 +7514,7 @@ function renderDossiers(){
           👤 ${c.agentUsername} · 📅 ${c.dateCreation?.split('T')[0]||'—'}${c.telephone?' · 📞'+c.telephone:''} · 🆔 ${c.id}
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <button class="btn-gold" style="padding:11px;font-size:12px;font-family:'Cinzel',serif" onclick="openClientCard('${c.id}')">🪪 Carte</button>
+          <button class="btn-gold" style="padding:11px;font-size:12px;font-family:'Cinzel',serif" onclick="ouvrirVerificationCarte('${c.id}')">🪪 Vérifier &amp; Carte</button>
           <button class="btn" style="padding:11px;font-size:12px;background:rgba(224,85,85,.12);border:1.5px solid rgba(224,85,85,.3);color:var(--danger)" onclick="signalerErreurDossier('${c.id}')">⚠️ Signaler erreur</button>
         </div>
       </div>

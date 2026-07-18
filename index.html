@@ -3422,7 +3422,12 @@ window.envoyerWA=window.envoyerWAAdmin=()=>{
 };
 
 window.ouvrirWhatsAppGroupe=()=>{
-  const nums=window._WA_NUMS||[];
+  // window._WA_NUMS n'était jamais assigné nulle part dans l'app (toujours
+  // undefined) — ce bouton affichait donc systématiquement "Aucun numéro
+  // disponible", même avec des dizaines de clients ayant un téléphone.
+  // Recalculé ici directement, en respectant le filtre agent du panneau.
+  const agFilter=document.getElementById('wa-filter-agent')?.value||'';
+  const nums=DB.clients().filter(c=>c.telephone&&c.telephone.trim()&&(!agFilter||c.agentUsername===agFilter));
   if(!nums.length){toast('⚠️ Aucun numéro disponible — ajoutez des clients avec numéro');return;}
   window.copierNumeros();
   toast('📋 Numéros copiés ! Ouvrez WhatsApp → Nouveau groupe → ajoutez les contacts');
@@ -3433,7 +3438,11 @@ window.ouvrirWhatsAppGroupe=()=>{
 window.setWATemplate=(type)=>{
   const el=document.getElementById('wa-broadcast-msg');
   if(!el) return;
-  const count=window._WA_CLIENTS?.length||0;
+  // window._WA_CLIENTS n'était jamais assigné nulle part dans l'app — le
+  // modèle "Accueil" annonçait donc toujours "0 clients" quel que soit le
+  // nombre réel. Recalculé ici, en respectant le filtre agent du panneau.
+  const agFilter=document.getElementById('wa-filter-agent')?.value||'';
+  const count=DB.clients().filter(c=>c.telephone&&c.telephone.trim()&&(!agFilter||c.agentUsername===agFilter)).length;
   const d=new Date();
   const date=d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
   const h=d.getHours();
@@ -7152,17 +7161,31 @@ window.sendPromoAll = function(){
 
 // ── Envoyer lien groupe à TOUS les clients (1 par 1) ──────────────────────────
 window.sendGroupeAll=function(){
-  const allC=DB.clients().filter(c=>c.telephone&&c.telephone.trim());
+  // Respecter le filtre agent du panneau, comme les autres actions (copier
+  // numéros, export CSV/VCF) — sinon un filtre actif était silencieusement
+  // ignoré et le message partait à TOUS les clients, pas seulement ceux
+  // affichés/sélectionnés.
+  const agFilter=document.getElementById('wa-filter-agent')?.value||'';
+  const allC=DB.clients().filter(c=>c.telephone&&c.telephone.trim()&&(!agFilter||c.agentUsername===agFilter));
   if(!allC.length){toast('⚠️ Aucun client avec numéro');return;}
   let i=0;
   const next=()=>{
-    if(i>=allC.length){toast('✅ '+i+' clients contactés !');return;}
+    if(i>=allC.length){toast('✅ '+i+' onglet(s) WhatsApp ouvert(s) !');return;}
     const c=allC[i++];
     const p=String(c.telephone).replace(/\D/g,'');
     if(p.length<8){next();return;}
     const intl=p.startsWith('243')?p:p.startsWith('0')?'243'+p.slice(1):'243'+p;
     const msg=_WA_TEMPLATES.groupe(c.nomComplet);
-    window.open('https://wa.me/'+intl+'?text='+encodeURIComponent(msg),'_blank');
+    const win=window.open('https://wa.me/'+intl+'?text='+encodeURIComponent(msg),'_blank');
+    // À partir du 2e envoi, ce n'est plus un appel direct issu du clic
+    // utilisateur (déclenché via setTimeout) — la plupart des navigateurs
+    // bloquent alors le popup silencieusement (window.open renvoie null).
+    // Sans cette vérification, le message final annonçait un succès total
+    // alors que la majorité des onglets n'avaient jamais pu s'ouvrir.
+    if(!win){
+      toast(`⚠️ Navigateur bloqué après ${i-1}/${allC.length} — autorisez les popups pour ce site, ou envoyez un par un depuis la liste`);
+      return;
+    }
     toast('📲 '+i+'/'+allC.length+' — '+c.nomComplet);
     setTimeout(next,2500);
   };

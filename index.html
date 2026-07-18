@@ -7418,6 +7418,17 @@ window.createPaiement=async()=>{
   if(!venteID||montant<=0){toast('⚠️ Montant requis');return;}
   // Utiliser l'agentUsername de la vente si admin/manager (pas SESSION.username)
   const veForPay=DB.ventes().find(x=>x.id===venteID);
+  // Garde-fou anti-erreur de saisie : avertir si le montant dépasse largement
+  // le reste dû (ex: un 0 de trop tapé par erreur) — n'empêche pas un
+  // paiement volontairement plus élevé, demande juste confirmation
+  if(veForPay){
+    const dejaPay=DB.pays().filter(p=>p.venteID===venteID).reduce((s,p)=>s+Number(p.montantPaye||0),0);
+    const resteAvant=Math.max(0,Number(veForPay.solde70||0)-dejaPay);
+    if(resteAvant>0&&montant>resteAvant){
+      const ok=confirm(`⚠️ Montant saisi (${fmtFC(montant)}) supérieur au reste dû (${fmtFC(resteAvant)}).\n\nConfirmer ce paiement quand même ?`);
+      if(!ok)return;
+    }
+  }
   const payAgent=(SESSION.role==='Admin'||SESSION.role==='Manager')?(veForPay?.agentUsername||SESSION.username):SESSION.username;
   const p={id:uid('PAY'),venteID,agentUsername:payAgent,montantPaye:montant,datePaiement:datePay,dateCreation:new Date().toISOString()};
   DB.addPay(p);await pP(p);

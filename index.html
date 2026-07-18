@@ -9020,8 +9020,24 @@ function injectWorldMaps(){
 
 // ── Compression LZW légère (string → base64-like compact) ──
 function lzwEncode(s){
-  const d={};let r=[],w='',c=256;
-  for(let i=0;i<s.length;i++){
+  // Convertir en octets UTF-8 (0-255) avant compression : un caractère brut
+  // ≥256 (emoji, guillemets typographiques, accents hors Latin-1…) — tout à
+  // fait plausible dans un nom ou une note tapée au téléphone — entrait en
+  // collision avec les codes dictionnaire LZW, qui démarrent eux aussi à
+  // 256, et corrompait silencieusement le flux compressé.
+  s=unescape(encodeURIComponent(s));
+  if(!s)return btoa(JSON.stringify([]));
+  // w doit démarrer sur le 1er caractère réel, pas une chaîne vide : sinon,
+  // à la 1re itération, la branche "non trouvé dans le dictionnaire" pousse
+  // w.charCodeAt(0) sur un w encore vide, ce qui vaut NaN. JSON.stringify(NaN)
+  // devient 'null', et au décodage String.fromCharCode(null) insère un octet
+  // NUL fantôme en tête de chaîne. Comme ce texte redevient ensuite du JSON
+  // (les archives stockent des tableaux d'enregistrements sérialisés), ce
+  // NUL en préfixe rendait JSON.parse() invalide à chaque fois — la
+  // restauration d'archive échouait donc systématiquement, sans exception,
+  // pour absolument toutes les archives jamais créées.
+  const d={};let r=[],w=s[0],c=256;
+  for(let i=1;i<s.length;i++){
     const ch=s[i],wc=w+ch;
     if(d[wc]!=null){w=wc;}
     else{r.push(w.length>1?d[w]:w.charCodeAt(0));d[wc]=c++;w=ch;}
@@ -9031,6 +9047,7 @@ function lzwEncode(s){
 }
 function lzwDecode(b){
   const r=JSON.parse(atob(b));
+  if(!r.length)return'';
   const d={};let w=String.fromCharCode(r[0]),result=w,entry='';
   let c=256;
   for(let i=1;i<r.length;i++){
@@ -9038,7 +9055,13 @@ function lzwDecode(b){
     entry=(k<256)?String.fromCharCode(k):(d[k]||w+w[0]);
     result+=entry;d[c++]=w+entry[0];w=entry;
   }
-  return result;
+  // Les archives créées après ce correctif encodent le texte en octets UTF-8
+  // avant compression (voir lzwEncode) — on réinterprète donc le résultat
+  // comme de l'UTF-8. Les archives créées avant ce correctif (texte brut,
+  // jamais byte-encodé) restent lisibles : pour elles, ce ré-encodage est
+  // soit sans effet (contenu ASCII/Latin-1, cas courant), soit échoue et on
+  // retourne alors le résultat brut tel quel plutôt que de planter.
+  try{ return decodeURIComponent(escape(result)); }catch{ return result; }
 }
 
 // ── Clé localStorage pour les archives locales (chiffrée) ──

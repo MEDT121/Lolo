@@ -4439,8 +4439,12 @@ window.saveFlagClient = async function() {
   const c = DB.clients().find(x => x.id === clientId);
   if (!c) return;
   const note    = document.getElementById('flag-note')?.value.trim() || '';
-  const blocked = document.getElementById('flag-block-vente')?.checked || false;
   const level   = _flagSelectedLevel === 'ok' ? null : _flagSelectedLevel;
+  // Le blocage de vente n'est proposé (et donc valide) que pour un client blacklisté —
+  // sans ce garde-fou, une case cochée sous "blacklist" puis un changement de niveau
+  // sans la décocher (elle est cachée, pas réinitialisée) sauvegardait un blocage
+  // fantôme sur un client non-blacklisté.
+  const blocked = level === 'blacklist' && (document.getElementById('flag-block-vente')?.checked || false);
   const updated = { ...c, flagManuel: level, noteInterne: note, venteBloquee: blocked };
   DB._s(K.C, DB.clients().map(x => x.id === clientId ? updated : x));
   await pC(updated);
@@ -5111,7 +5115,7 @@ window.setDuree=days=>{
 window.updateCalc=()=>{
   const m=parseFloat(document.getElementById('nv-montant')?.value||0)||0;
   const duree=_nv_duree||20;
-  const a30=Math.round(m*.3),s70=Math.round(m*.7),mj=Math.round(s70/duree);
+  const a30=Math.round(m*.3),s70=m-a30,mj=Math.round(s70/duree);
   const finDate=new Date(Date.now()+duree*864e5).toISOString().split('T')[0];
   const v=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
   v('cv-ac',fmtFC(a30));v('cv-sl',fmtFC(s70));v('cv-jr',fmtFC(mj));
@@ -5146,10 +5150,6 @@ async function _doCreateVente(){
   if((SESSION.role==='Agent'||SESSION.role==='Manager')&&cl&&cl.agentUsername!==SESSION.username){
     toast('⚠️ Vous ne pouvez vendre qu\'à vos propres clients');return;
   }
-  // Manager : vente uniquement sur SES propres clients (pas ceux de ses agents)
-  if(SESSION.role==='Manager'&&cl&&cl.agentUsername!==SESSION.username){
-    toast('⚠️ Manager : vous ne pouvez vendre qu\'à vos propres clients');return;
-  }
   // Admin peut sélectionner l'agent manuellement, sinon utilise l'agent du client
   const adminAgentSel=SESSION.role==='Admin'?document.getElementById('nv-agent-sel')?.value||'':'' ;
   const agentUsername=SESSION.role==='Agent'?SESSION.username:(adminAgentSel||cl?.agentUsername||SESSION.username);
@@ -5159,7 +5159,7 @@ async function _doCreateVente(){
     if((solde[produit]||0)<1){toast('⚠️ Stock épuisé pour ce produit — demandez un réapprovisionnement');return;}
   }
   const duree=_nv_duree||20;
-  const a30=Math.round(montant*.3),s70=Math.round(montant*.7),mj=Math.round(s70/duree);
+  const a30=Math.round(montant*.3),s70=montant-a30,mj=Math.round(s70/duree);
   const dateFin=new Date(Date.now()+duree*864e5).toISOString().split('T')[0];
   const v={id:uid('VTE'),agentUsername,venduPar:SESSION.username,clientID,produit,montantTotal:montant,acompte30:a30,solde70:s70,montantJournalier:mj,dureeJours:duree,dateDebut:today(),dateFin,dateCreation:new Date().toISOString()};
   DB.addVente(v);await pV(v);
@@ -5646,7 +5646,7 @@ window.recalcCorr=val=>{
   // Récupérer la durée réelle de la vente en cours de correction
   const duree=parseInt(document.getElementById('cf-duree')?.value)||(CORR_TGT?.type==='vente'?DB.ventes().find(x=>x.id===CORR_TGT.refId)?.dureeJours:null)||30;
   const durLbl=document.getElementById('cf-dur-lbl');if(durLbl)durLbl.textContent=duree+'j';
-  const a30=Math.round(m*.3),s70=Math.round(m*.7),mj=Math.round(s70/duree);
+  const a30=Math.round(m*.3),s70=m-a30,mj=Math.round(s70/duree);
   [['cf-ac',a30],['cf-sl',s70],['cf-jr',mj]].forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.textContent=fmtFC(v);});
 };
 
@@ -5671,7 +5671,8 @@ window.applyCorrection=async()=>{
     const dureeV=parseInt(document.getElementById('cf-duree')?.value)||DB.ventes().find(x=>x.id===refId)?.dureeJours||30;
     const vagField=document.getElementById('cf-vagt');
     if(!produit||montant<=0){toast('⚠️ Vérifiez les champs');return;}
-    const p={produit,montantTotal:montant,acompte30:Math.round(montant*.3),solde70:Math.round(montant*.7),montantJournalier:Math.round(montant*.7/dureeV),dureeJours:dureeV};
+    const a30c=Math.round(montant*.3),s70c=montant-a30c;
+    const p={produit,montantTotal:montant,acompte30:a30c,solde70:s70c,montantJournalier:Math.round(s70c/dureeV),dureeJours:dureeV};
     if(SESSION.role==='Admin'&&vagField?.value?.trim())p.agentUsername=vagField.value.trim();
     DB.updVente(refId,p);await pV(DB.ventes().find(x=>x.id===refId));
   }else if(type==='paiement'){

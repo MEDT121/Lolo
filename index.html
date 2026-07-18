@@ -3396,7 +3396,7 @@ function _sbShowResult(title, detail, type) {
 
 // Initialiser les tables Supabase (via SQL exécuté manuellement)
 window.gsInitSheets = async () => {
-  toast('ℹ️ Tables Supabase à créer via SQL — voir le fichier schema.sql dans le README');
+  toast('ℹ️ Tables Supabase à créer via SQL — voir le fichier schema.sql à la racine du dépôt');
 };
 
 window.disconnectFirebase = window.disconnectGS = () => {
@@ -8997,70 +8997,6 @@ const WORLD_MAP_SVG=`<svg viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/s
 function injectWorldMaps(){
   document.querySelectorAll('.carte-wm').forEach(el=>{el.innerHTML=WORLD_MAP_SVG;});
 }
-
-// ══════════════════════════════════════════════
-// SQL SCHEMA
-// ══════════════════════════════════════════════
-const SQL=`-- ═══ COLLER DANS SUPABASE SQL EDITOR ═══
-
-create table if not exists zs_utilisateurs (
-  id text primary key, username text unique not null,
-  password text not null, role text not null,
-  manager_username text, actif boolean default true,
-  photo text, date_creation date
-);
-create table if not exists zs_clients (
-  id text primary key, nom_complet text not null,
-  agent_username text not null, photo text,
-  lieu_activite text, activite text, telephone text,
-  date_creation timestamp, carte_creee text default 'Non'
-);
--- Si la table existe déjà, ajouter la colonne telephone :
--- alter table zs_clients add column if not exists telephone text;
-create table if not exists zs_ventes (
-  id text primary key, agent_username text, vendu_par text,
-  client_id text, produit text, montant_total numeric,
-  acompte30 numeric, solde70 numeric, montant_journalier numeric,
-  duree_jours integer default 30,
-  date_debut date, date_fin date, date_creation timestamp
-);
-create table if not exists zs_paiements (
-  id text primary key, vente_id text, agent_username text,
-  montant_paye numeric, date_paiement date, date_creation timestamp
-);
-create table if not exists zs_stock (
-  id text primary key, source_username text,
-  dest_username text, produit text,
-  quantite numeric, prix_unitaire numeric default 0,
-  date_mouvement timestamp
-);
-create table if not exists zs_signalements (
-  id text primary key, type text, ref_id text,
-  reporter text, description text,
-  statut text default 'attente',
-  date_creation timestamp, date_resolution date
-);
--- Table archives (données compressées > 1 mois)
-create table if not exists zs_archives (
-  id text primary key,
-  type_donnee text not null,
-  periode text not null,
-  nb_lignes integer default 0,
-  taille_octets integer default 0,
-  taux_compression integer default 0,
-  donnees_compressees text not null,
-  archive_le timestamp default now(),
-  archive_par text
-);
--- Activer RLS (sécurité row level)
-do $$ declare t text;
-begin for t in values ('zs_utilisateurs'),('zs_clients'),
-  ('zs_ventes'),('zs_paiements'),('zs_stock'),('zs_signalements'),('zs_archives')
-loop
-  execute format('alter table %I enable row level security', t);
-  execute format('drop policy if exists "allow_all" on %I', t);
-  execute format('create policy "allow_all" on %I for all using (true) with check (true)', t);
-end loop; end $$;`;
 
 // ══════════════════════════════════════════════
 // SYSTÈME D'ARCHIVAGE AUTOMATIQUE

@@ -2871,8 +2871,10 @@ async function _pullSheets() {
   if (!_SB_CONNECTED || _isSyncing) return 0;
   _isSyncing = true;
   let updated = 0;
+  const tables = Object.keys(_SB_TABLES);
+  let failCount = 0, lastErr = null;
   try {
-    for (const tbl of Object.keys(_SB_TABLES)) {
+    for (const tbl of tables) {
       try {
         const rows = await _sbPull(tbl);
         if (!rows.length) continue;
@@ -2886,9 +2888,16 @@ async function _pullSheets() {
         updated++;
       } catch(e) {
         console.warn('[PULL SB]', tbl, '—', e.message);
+        failCount++; lastErr = e.message;
       }
     }
-    if (updated > 0) { renderCurrent(); _updateSyncBadge(); }
+    // Échec systémique (ex: tables absentes, clé invalide) : TOUTES les
+    // tables échouent, à distinguer d'un simple "tout est déjà à jour"
+    // (rows vides = pas d'erreur). Sans cette distinction, l'indicateur
+    // de sync affichait "✅ Synchronisé" même quand rien ne fonctionnait.
+    window._lastPullError = (failCount === tables.length) ? lastErr : null;
+    if (updated > 0) { renderCurrent(); }
+    _updateSyncBadge();
     window._lastPullTime = Date.now();
   } finally {
     _isSyncing = false;
@@ -3031,6 +3040,7 @@ function _updateSyncBadge() {
   if (!con)          { dot = '#555';    txt = 'Mode hors ligne — Supabase non connecté'; }
   else if (!online)  { dot = '#f4b942'; txt = `Hors ligne — ${pending} en attente`; }
   else if (sending)  { dot = '#4285f4'; txt = `↑ Envoi ${sending} élément(s)…`; }
+  else if (window._lastPullError) { dot = '#e05555'; txt = `⚠️ Erreur de sync : ${window._lastPullError}`; }
   else if (pending)  { dot = '#f4b942'; txt = `${pending} modification(s) à synchroniser`; }
   else               { dot = '#34a853'; txt = '✅ Synchronisé avec Supabase'; }
 
@@ -3441,6 +3451,11 @@ window.syncNow = async (fromBtn) => {
     const n = await _pullSheets();
     pulled = n || 0;
     const dt    = ((Date.now() - t0) / 1000).toFixed(1);
+    if (window._lastPullError) {
+      toast('⚠️ Échec de synchronisation : ' + window._lastPullError, 6000);
+      allBtns.forEach(b => { b.disabled = false; b.textContent = b._origTxt || '🔄 Sync'; });
+      return;
+    }
     const parts = [];
     if (pushed > 0) parts.push('↑ ' + pushed + ' envoyé' + (pushed > 1 ? 's' : ''));
     if (pulled > 0) parts.push('↓ ' + pulled + ' table' + (pulled > 1 ? 's' : '') + ' reçue' + (pulled > 1 ? 's' : ''));
@@ -5069,6 +5084,9 @@ function renderDashboardAdmin(){
         </div>`).join('');
     })()}
   `;
+  // La barre de sync ci-dessus est réinjectée à chaque rendu avec son texte
+  // par défaut (placeholder statique) — refléter l'état réel immédiatement.
+  _updateSyncBadge();
 }
 
 // Tous les clients visibles par le manager (propres + agents) — pour encaissement
@@ -8264,6 +8282,9 @@ function renderSettings(){
       } else if(!navigator.onLine){
         syncEl.textContent = '📴 Hors ligne — '+pending+' en attente';
         syncEl.style.color = '#f4b942';
+      } else if(window._lastPullError){
+        syncEl.textContent = '⚠️ Erreur de sync : '+window._lastPullError;
+        syncEl.style.color = 'var(--danger)';
       } else if(pending>0){
         syncEl.textContent = '⏳ '+pending+' modification(s) à synchroniser';
         syncEl.style.color = '#f4b942';
@@ -8274,7 +8295,7 @@ function renderSettings(){
     }
     if(dotEl){
       dotEl.style.background = !connected ? '#555' :
-        !navigator.onLine ? '#f4b942' : pending>0 ? '#f4b942' : '#22c55e';
+        !navigator.onLine ? '#f4b942' : window._lastPullError ? '#e05555' : pending>0 ? '#f4b942' : '#22c55e';
     }
   }
 
@@ -8307,18 +8328,6 @@ function renderSettings(){
     }
   }
 
-  if(isAdmin){
-    const urlEl=document.getElementById('disp-url'),keyEl=document.getElementById('disp-key');
-    const q=_qGet?_qGet():[];
-    const pending=q.filter(x=>x.status==='pending').length;
-    const gasOk=!!getGsUrl();
-    if(urlEl) urlEl.textContent = gasOk ? '✅ Lecture + Écriture active' : '📖 Lecture seule (GAS non configuré)';
-    if(keyEl){
-      if(!_GS_CONNECTED){ keyEl.textContent='⚠️ Non connecté'; keyEl.style.color='var(--danger)'; }
-      else if(pending>0){ keyEl.textContent=`☁️ ${pending} en attente`; keyEl.style.color='var(--warn)'; }
-      else { keyEl.textContent='✅ Synchronisé'; keyEl.style.color='var(--success)'; }
-    }
-  }
   // Profile mini-card
   const u=DB.users().find(x=>x.username===SESSION.username);
   if(u){

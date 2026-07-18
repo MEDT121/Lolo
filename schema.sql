@@ -8,6 +8,12 @@
 -- (YYYY-MM-DD), tantôt un horodatage ISO complet selon l'écran —
 -- un type strict ferait échouer silencieusement la synchronisation
 -- sur certains enregistrements.
+--
+-- Migration (si vous avez déjà exécuté une version précédente de ce
+-- fichier et que les tables existent) : la commande "create table
+-- if not exists" ne modifiera pas une table déjà créée. Exécutez en
+-- plus, une seule fois :
+--   alter table clients add column if not exists carte_num integer;
 -- ═══════════════════════════════════════════════════════════════
 
 create table if not exists utilisateurs (
@@ -37,7 +43,8 @@ create table if not exists clients (
   carte_creee       text default 'Non',
   flag_manuel       text,
   note_interne      text,
-  vente_bloquee     boolean default false
+  vente_bloquee     boolean default false,
+  carte_num         integer
 );
 
 create table if not exists ventes (

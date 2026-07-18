@@ -6826,6 +6826,41 @@ async function _drawCard(c, ctx, W, H) {
   photoShine.addColorStop(0,'rgba(255,255,255,0.14)'); photoShine.addColorStop(0.7,'rgba(255,255,255,0)');
   ctx.fillStyle=photoShine; ctx.beginPath(); ctx.arc(CX,CY,CR,0,Math.PI*2); ctx.fill();
 
+  // ─── 5b. NOM DU CLIENT — mis en avant juste sous la photo ─────────────────
+  // C'est l'information la plus importante d'une carte de membre : elle
+  // doit se voir en premier, pas se perdre au milieu d'une liste de champs
+  // au même poids visuel. Grand, gras, centré, avec un filet doré dessous.
+  const NAME_Y = CY + CR + W*0.155;
+  let nameSize = Math.round(W*0.066);
+  const maxNameW = W*0.90;
+  ctx.font = `900 ${nameSize}px "Arial Black",Arial,sans-serif`;
+  const displayName = (c.nomComplet||'—').toUpperCase();
+  const nameW = ctx.measureText(displayName).width;
+  if (nameW > maxNameW) nameSize = Math.floor(nameSize * maxNameW / nameW);
+  ctx.font = `900 ${nameSize}px "Arial Black",Arial,sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+  ctx.save();
+  ctx.shadowColor='rgba(201,160,48,0.35)'; ctx.shadowBlur=W*0.006; ctx.shadowOffsetY=W*0.003;
+  ctx.fillStyle=BLACK;
+  ctx.fillText(displayName, W*0.5, NAME_Y);
+  ctx.restore();
+  // Filet doré court sous le nom
+  const RULE_Y = NAME_Y + H*0.014, RULE_W = W*0.16;
+  ctx.strokeStyle=GOLD; ctx.lineWidth=W*0.006; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(W*0.5-RULE_W/2, RULE_Y); ctx.lineTo(W*0.5+RULE_W/2, RULE_Y); ctx.stroke();
+
+  // Sous-titre : activité (rôle/fonction du membre), discret sous le nom
+  let subtitleH = 0;
+  if (c.activite) {
+    const SUB_Y = RULE_Y + H*0.032;
+    ctx.font = `italic 400 ${Math.round(W*0.032)}px Georgia,"Times New Roman",serif`;
+    ctx.fillStyle = '#6a5830';
+    ctx.fillText(_fitText(ctx, c.activite, maxNameW), W*0.5, SUB_Y);
+    subtitleH = H*0.032;
+  }
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  const NAME_BLOCK_BOTTOM = RULE_Y + subtitleH + H*0.030; // marge avant le bloc infos
+
   // ─── 6. BLOC INFOS + QR ────────────────────────────────────────────────────
   // Numéro de carte — attribué une seule fois à la création (c.carteNum) et
   // jamais recalculé, pour qu'il reste identique même si d'autres clients
@@ -6850,7 +6885,7 @@ async function _drawCard(c, ctx, W, H) {
   const QR_SIZE = Math.round(W * 0.312);   // ~212px → scan rapide même de loin
   const QR_PAD  = Math.round(W * 0.022);   // padding cadre blanc
   const QR_X    = W * 0.965 - QR_PAD - QR_SIZE; // aligné sur la marge droite
-  const INFO_Y0 = H * 0.548;               // ligne de départ infos
+  const INFO_Y0 = NAME_BLOCK_BOTTOM;       // ligne de départ infos, sous le nom
   const QR_Y    = INFO_Y0 - QR_PAD;
 
   // Cadre blanc QR avec ombre légère
@@ -6898,29 +6933,41 @@ async function _drawCard(c, ctx, W, H) {
   const INFO_X   = W * 0.062;
   const INFO_MAXW= QR_X - INFO_X - W*0.030;
 
+  // Propriétaire et Activité sont désormais affichés en grand juste sous la
+  // photo (voir bloc 5b) au lieu d'être noyés dans cette liste — mais
+  // toutes les informations de la carte restent présentes, rien n'est
+  // supprimé, uniquement réorganisé pour une lecture plus professionnelle.
+  //
+  // Enregistré par / Membre depuis / Num Service / Code client sont
+  // regroupés dans CETTE MÊME colonne (au lieu d'un bloc "footer" séparé
+  // sous le QR) : le QR code, de taille fixe pour rester scannable
+  // facilement, est plus haut que la liste d'infos courte — la place à
+  // côté de lui restait donc inutilisée.
   const genreTxt  = c.genre==='H'?'Masculin':c.genre==='F'?'Féminin':null;
   const depuisVal = (c.actifDepuis||c.dateCreation||'').split('T')[0].slice(0,4)||'—';
+  const membreDepuis = (c.dateCreation||'').split('T')[0].replace(/-/g,'.')||'—';
   const infos = [
     {lbl:'N° Carte :',    val:numSeq,              gold:true},
-    {lbl:'Propriétaire :',val:c.nomComplet||'—',   bold:true},
-    {lbl:'Activité :',    val:c.activite||'—'},
     {lbl:'Lieu :',        val:c.lieuActivite||'—'},
     ...(genreTxt?[{lbl:'Sexe :',val:genreTxt}]:[]),
     {lbl:'Actif depuis :',val:depuisVal},
     ...(c.telephone?[{lbl:'Téléphone :',val:c.telephone, small:true}]:[]),
+    {lbl:'Enregistré par :', val:c.agentUsername||'—',    muted:true},
+    {lbl:'Membre depuis :',  val:membreDepuis,             muted:true},
+    {lbl:'Num Service :',    val:'+243 082842689',         muted:true, small:true},
+    {lbl:'Code client :',    val:codeClient,               muted:true},
   ];
 
-  // Réserve de hauteur adaptative : les champs Sexe et Téléphone sont
-  // optionnels (5 à 7 lignes selon le client). Avec un LH fixe, un client
-  // ayant les deux poussait le bloc "infos" assez bas pour que le bloc
-  // footer (agent, date, service, code client) finisse sous la bande
-  // sombre du bas — invisible, sans aucune erreur. On calcule ici un
-  // facteur d'échelle qui ne comprime les espacements QUE si nécessaire
-  // (le cas courant à 5-6 lignes garde l'espacement d'origine, spacieux).
-  const FOOT_N     = 4;                 // nb de lignes du footer, toujours fixe
-  const availableH = H*0.904 - H*0.548; // de INFO_Y0 jusqu'à la bande sombre
-  const naturalH   = infos.length*(H*0.058) + H*0.016 + H*0.022 + FOOT_N*(H*0.042);
-  const vScale     = Math.min(1, availableH / naturalH);
+  // Réserve de hauteur adaptative : le nombre de lignes varie (5 à 7 selon
+  // Sexe/Téléphone), et le cadre QR (taille fixe, ne se comprime jamais)
+  // peut être plus grand que la liste elle-même. Le facteur d'échelle
+  // compare donc les deux, pour que le filet doré + la suite ne finissent
+  // jamais sous la bande sombre du bas — quel que soit le nombre de lignes.
+  const availableH  = H*0.895 - INFO_Y0;         // de INFO_Y0 (sous le nom) jusqu'à la bande sombre
+  const qrNaturalH  = QR_SIZE + QR_PAD;          // hauteur du cadre QR depuis INFO_Y0
+  const infosNaturalH = infos.length*(H*0.058);
+  const naturalH    = Math.max(infosNaturalH, qrNaturalH) + H*0.016;
+  const vScale      = Math.min(1, availableH / naturalH);
 
   const LH       = H * 0.058 * vScale;   // hauteur de ligne (infos)
   const LBL_SIZE = Math.round(W*0.033 * vScale);
@@ -6935,16 +6982,17 @@ async function _drawCard(c, ctx, W, H) {
       ctx.beginPath(); ctx.roundRect(INFO_X-W*0.01, y-LH*0.72, INFO_MAXW+W*0.02, LH*0.88, W*0.010); ctx.fill();
     }
 
-    // Label (gras noir)
+    // Label (gras noir, ou gris discret pour les champs administratifs)
     ctx.font=`700 ${LBL_SIZE}px Arial,sans-serif`;
-    ctx.fillStyle=BLACK; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    ctx.fillStyle = info.muted ? GRAY : BLACK;
+    ctx.textAlign='left'; ctx.textBaseline='alphabetic';
     ctx.fillText(info.lbl, INFO_X, y);
     const lblW = ctx.measureText(info.lbl+' ').width;
 
     // Valeur
     const vSize = info.small ? Math.round(W*0.028*vScale) : VAL_SIZE;
     ctx.font=`${info.bold?'700':'400'} ${vSize}px Arial,sans-serif`;
-    ctx.fillStyle = info.gold ? GOLD : BLACK;
+    ctx.fillStyle = info.gold ? GOLD : (info.muted ? BLACK : BLACK);
 
     // Tronquer si trop long
     const maxW = INFO_MAXW - lblW - W*0.01;
@@ -6952,8 +7000,13 @@ async function _drawCard(c, ctx, W, H) {
     ctx.fillText(val, INFO_X+lblW, y);
   });
 
-  // ─── 7. SÉPARATEUR APRÈS INFOS ─────────────────────────────────────────────
-  const SEP_Y = INFO_Y0 + infos.length*LH + H*0.016*vScale;
+  // ─── 7. SÉPARATEUR AVANT LA BANDE SOMBRE ───────────────────────────────────
+  // Doit passer sous le plus grand des deux blocs (liste d'infos OU cadre
+  // QR) — sinon, avec une liste raccourcie, le filet doré traversait le
+  // cadre du QR code au lieu de rester en dessous.
+  const infosBottom = INFO_Y0 + infos.length*LH;
+  const qrBottom     = QR_Y + QR_SIZE + QR_PAD*2;
+  const SEP_Y = Math.max(infosBottom, qrBottom) + H*0.012*vScale;
   const sepG2=ctx.createLinearGradient(INFO_X,0,W-INFO_X,0);
   sepG2.addColorStop(0,'rgba(201,160,48,0)');
   sepG2.addColorStop(0.1,'rgba(201,160,48,0.75)');
@@ -6962,32 +7015,6 @@ async function _drawCard(c, ctx, W, H) {
   sepG2.addColorStop(1,'rgba(201,160,48,0)');
   ctx.strokeStyle=sepG2; ctx.lineWidth=W*0.004;
   ctx.beginPath(); ctx.moveTo(INFO_X,SEP_Y); ctx.lineTo(W-INFO_X,SEP_Y); ctx.stroke();
-
-  // ─── 8. FOOTER ─────────────────────────────────────────────────────────────
-  const FT_Y0  = SEP_Y + H*0.022*vScale;
-  const FT_LH  = H*0.042*vScale;
-  const FT_S   = Math.round(W*0.029*vScale);
-  const FT_SB  = Math.round(W*0.029*vScale);
-  const dateStr= (c.dateCreation||'').split('T')[0].replace(/-/g,'.')||'—';
-
-  const footLines=[
-    {lbl:'Enregistré par : ', val:c.agentUsername||'…………………'},
-    {lbl:"Date d'enregistrement : ", val:dateStr},
-    {lbl:'Num Service : ', val:'+243 082842689'},
-    {lbl:'Code client : ', val:codeClient},
-  ];
-  footLines.forEach((fl,i)=>{
-    const y=FT_Y0+i*FT_LH;
-    ctx.font=`400 ${FT_S}px Arial,sans-serif`; ctx.fillStyle=GRAY;
-    ctx.textAlign='left'; ctx.textBaseline='alphabetic';
-    ctx.fillText(fl.lbl, INFO_X, y);
-    const lw=ctx.measureText(fl.lbl).width;
-    ctx.font=`700 ${FT_SB}px Arial,sans-serif`; ctx.fillStyle=BLACK;
-    // Tronquer si trop long (ex: nom d'agent long)
-    const maxW=(W-INFO_X)-(INFO_X+lw)-W*0.01;
-    const val=_fitText(ctx, fl.val, maxW);
-    ctx.fillText(val, INFO_X+lw, y);
-  });
 
   // ─── 9. BANDE SOMBRE + SLOGAN ──────────────────────────────────────────────
   const BAN_H = H*0.088;

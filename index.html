@@ -8109,7 +8109,6 @@ window.genFichePDFClient=async(clientId)=>{
   toast('⏳ Génération fiche PDF…');
   try{
     await loadJsPDF();
-    await loadH2C();
     const {jsPDF}=window.jspdf;
     const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
     const ventes=DB.ventes().filter(v=>v.clientID===clientId);
@@ -8122,19 +8121,25 @@ window.genFichePDFClient=async(clientId)=>{
     const totalReste=Math.max(0,totalDu-totalPaye);
     const pW=210,margin=14;
 
-    // ── Tentative de capture de la carte bancaire ──
+    // ── Capture de la carte client (rendue fraîchement, pas depuis le DOM) ──
+    // L'ancien code cherchait #verif-carte-preview / #carte-preview via
+    // html2canvas — ces deux ids n'existent nulle part dans la page (les
+    // vrais canvas s'appellent carte-canvas-preview / carte-canvas-verif),
+    // donc l'image de la carte n'était jamais incluse dans la fiche PDF,
+    // silencieusement, depuis la création de cette fonctionnalité.
+    // generateClientCardCanvas() dessine la carte de ce client à la volée
+    // sur un canvas hors-écran, sans dépendre d'un état DOM potentiellement
+    // absent ou obsolète (carte d'un autre client déjà affichée).
     let cardImgData=null;
     try{
-      // Ouvrir temporairement la carte (invisible) pour html2canvas
-      const carteEl=document.getElementById('verif-carte-preview')||document.getElementById('carte-preview');
-      if(carteEl){
-        const oldDisplay=carteEl.parentElement?.style?.display;
-        const canvas=await html2canvas(carteEl,{
-          scale:3,useCORS:true,allowTaint:true,
-          backgroundColor:'#060400',logging:false,imageTimeout:3000
+      const blob=await generateClientCardCanvas(c);
+      if(blob){
+        cardImgData=await new Promise((res,rej)=>{
+          const fr=new FileReader();
+          fr.onload=()=>res(fr.result);
+          fr.onerror=rej;
+          fr.readAsDataURL(blob);
         });
-        cardImgData=canvas.toDataURL('image/png',1.0);
-        if(oldDisplay!==undefined)carteEl.parentElement.style.display=oldDisplay;
       }
     }catch(e){cardImgData=null;}
 
@@ -8451,20 +8456,28 @@ function _photoSize(){
 
 window.purgerPhotosArchivees=()=>{
   const bf=_photoSize();if(!bf.total){toast('✅ Aucune photo à purger');return;}
-  let n=0;
-  const clients=DB.clients().map(c=>{
-    if(!c.photo?.startsWith('data:'))return c;
+  const isCandidate=c=>{
+    if(!c.photo?.startsWith('data:'))return false;
     const cv=DB.ventes().filter(v=>v.clientID===c.id);
-    if(!cv.length)return c;
-    const ok=cv.every(v=>{
+    if(!cv.length)return false;
+    return cv.every(v=>{
       const dp=DB.pays().filter(p=>p.venteID===v.id).reduce((s,p)=>s+Number(p.montantPaye||0),0);
       return dp>=Number(v.solde70||0);
     });
-    if(ok){n++;return{...c,photo:''};}
-    return c;
-  });
-  DB._s(K.C,clients);
-  toast(`🧹 ${n} photo(s) purgée(s) — ${bf.kb-_photoSize().kb}Ko libérés`);
+  };
+  const candidates=DB.clients().filter(isCandidate);
+  if(!candidates.length){toast('✅ Aucune photo à purger');return;}
+  // Ces photos sont encore en base64 locale (c.photo commence par "data:"),
+  // ce qui veut dire précisément qu'elles n'ont JAMAIS été envoyées avec
+  // succès vers Supabase Storage (une photo migrée devient une URL, pas du
+  // base64) — les supprimer ici en détruit donc l'unique copie existante,
+  // définitivement. Une confirmation était absente ici alors qu'elle existe
+  // bien sur purgerToutesPhotos juste à côté, pour une action équivalente.
+  const ok=confirm(`⚠️ ${candidates.length} photo(s) de clients soldés n'ont jamais été envoyées vers Supabase (encore stockées uniquement en local).\n\nLes supprimer les perd définitivement — aucune copie n'existe ailleurs.\n\nSupprimer quand même ?`);
+  if(!ok)return;
+  const candidateIds=new Set(candidates.map(c=>c.id));
+  DB._s(K.C,DB.clients().map(c=>candidateIds.has(c.id)?{...c,photo:''}:c));
+  toast(`🧹 ${candidates.length} photo(s) purgée(s) — ${bf.kb-_photoSize().kb}Ko libérés`);
   renderCurrent();window.diagnosticStockage?.();
 };
 

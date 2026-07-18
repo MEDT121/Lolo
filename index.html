@@ -2630,11 +2630,18 @@ Object.defineProperty(window,'_FB_CONNECTED',{get:()=>_SB_CONNECTED,set:v=>{_SB_
 Object.defineProperty(window,'GS_URL',{get:()=>SB_URL,set:v=>{SB_URL=v;},configurable:true});
 Object.defineProperty(window,'FB_URL',{get:()=>SB_URL,set:v=>{SB_URL=v;},configurable:true});
 
+// ── Connexion Supabase par défaut (clé anon — publique par conception, ─────────
+//    protégée par les policies RLS, pas par le secret) ────────────────────────
+const _SB_DEFAULT_URL = 'https://xsaqmhkdsfwvaizdshpm.supabase.co';
+const _SB_DEFAULT_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzYXFtaGtkc2Z3dmFpemRzaHBtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzNTEyNTksImV4cCI6MjA5OTkyNzI1OX0.b2QPl-yKuUD3PUCdUHGeHy6nJo10HFvQQPqHxffciLI';
+
 // ── Persistance chiffrée config Supabase ──────────────────────────────────────
-function getSbUrl()  { try{return _dec(localStorage.getItem('_sb_url'))||'';}catch{return '';} }
-function setSbUrl(u) { try{if(u)localStorage.setItem('_sb_url',_enc(u));else localStorage.removeItem('_sb_url');}catch{} }
-function getSbKey()  { try{return _dec(localStorage.getItem('_sb_key'))||'';}catch{return '';} }
-function setSbKey(k) { try{if(k)localStorage.setItem('_sb_key',_enc(k));else localStorage.removeItem('_sb_key');}catch{} }
+// Si l'utilisateur n'a jamais rien configuré (et n'a pas explicitement
+// déconnecté via disconnectGS), on retombe sur la connexion par défaut.
+function getSbUrl()  { try{ if(localStorage.getItem('_sb_disabled')==='1')return ''; return _dec(localStorage.getItem('_sb_url'))||_SB_DEFAULT_URL; }catch{return _SB_DEFAULT_URL;} }
+function setSbUrl(u) { try{if(u){localStorage.setItem('_sb_url',_enc(u));localStorage.removeItem('_sb_disabled');}else{localStorage.removeItem('_sb_url');localStorage.setItem('_sb_disabled','1');}}catch{} }
+function getSbKey()  { try{ if(localStorage.getItem('_sb_disabled')==='1')return ''; return _dec(localStorage.getItem('_sb_key'))||_SB_DEFAULT_KEY; }catch{return _SB_DEFAULT_KEY;} }
+function setSbKey(k) { try{if(k){localStorage.setItem('_sb_key',_enc(k));localStorage.removeItem('_sb_disabled');}else{localStorage.removeItem('_sb_key');localStorage.setItem('_sb_disabled','1');}}catch{} }
 // Aliases pour compatibilité
 function getGsUrl()  { return getSbUrl(); }
 function setGsUrl(u) { setSbUrl(u); }

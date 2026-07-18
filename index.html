@@ -2675,7 +2675,7 @@ const _toSB = {
     actif:c.actif!==false, actif_depuis:c.actifDepuis||'',
     date_creation:c.dateCreation||today(), carte_creee:c.carteCreee||'Non',
     flag_manuel:c.flagManuel||null, note_interne:c.noteInterne||'',
-    vente_bloquee:c.venteBloquee||false
+    vente_bloquee:c.venteBloquee||false, carte_num:c.carteNum||null
   }),
   ventes: v=>({
     id:v.id, agent_username:v.agentUsername, vendu_par:v.venduPar||v.agentUsername,
@@ -2719,7 +2719,7 @@ const _fromSB = {
     dateCreation:String(d.date_creation||''),
     carteCreee:String(d.carte_creee||'Non'),
     flagManuel:d.flag_manuel||null, noteInterne:String(d.note_interne||''),
-    venteBloquee:d.vente_bloquee||false
+    venteBloquee:d.vente_bloquee||false, carteNum:d.carte_num||null
   }),
   ventes: d=>({
     id:String(d.id||''), agentUsername:String(d.agent_username||''),
@@ -6225,7 +6225,8 @@ window.createClient=async()=>{
     id:cid,nomComplet:nom,telephone:tel,agentUsername,photo:photo||'',
     lieuActivite:lieu,activite:act,cin:cin,genre:genre,
     actif:actif,actifDepuis:actif?new Date().toISOString():'',
-    dateCreation:new Date().toISOString(),carteCreee:'Non',carteData:''
+    dateCreation:new Date().toISOString(),carteCreee:'Non',carteData:'',
+    carteNum:DB.clients().length+1
   };
 
   DB.addClient(c);await pC(c);
@@ -6831,11 +6832,20 @@ async function _drawCard(c, ctx, W, H) {
   ctx.fillStyle=photoShine; ctx.beginPath(); ctx.arc(CX,CY,CR,0,Math.PI*2); ctx.fill();
 
   // ─── 6. BLOC INFOS + QR ────────────────────────────────────────────────────
-  // Numéro séquentiel
-  const allCl = window.DB ? DB.clients() : [];
-  const cIdx  = allCl.findIndex(x=>x.id===c.id);
-  const numSeq    = 'ZLV-' + String(Math.max(1,cIdx+1)).padStart(5,'0');
-  const codeClient= String(Math.max(1,cIdx+1)).padStart(4,'0');
+  // Numéro de carte — attribué une seule fois à la création (c.carteNum) et
+  // jamais recalculé, pour qu'il reste identique même si d'autres clients
+  // sont supprimés entre-temps. Pour les clients créés avant cette règle
+  // (sans carteNum), on en attribue un maintenant et on le fige (persisté).
+  if (!c.carteNum) {
+    const allCl = window.DB ? DB.clients() : [];
+    c.carteNum = Math.max(1, allCl.findIndex(x=>x.id===c.id) + 1);
+    try {
+      DB.updClient(c.id, {carteNum:c.carteNum});
+      if (typeof pC === 'function') pC({...c});
+    } catch(e) {}
+  }
+  const numSeq    = 'ZLV-' + String(c.carteNum).padStart(5,'0');
+  const codeClient= String(c.carteNum).padStart(4,'0');
 
   // QR d'abord (à droite) — agrandi pour un scan rapide et fiable sur le
   // terrain (carte usée, éclairage faible, caméra bas de gamme)

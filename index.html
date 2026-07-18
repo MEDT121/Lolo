@@ -5532,7 +5532,7 @@ function renderCorrections(){
     ${s.statut==='resolu'&&s.resolvedBy?`<div style="font-size:10px;color:var(--success);margin-bottom:4px">✓ Corrigé par ${s.resolvedBy}</div>`:''}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
       <div><div style="font-size:10px;color:var(--gold);font-family:monospace">👤 ${s.reporter}</div><div style="font-size:10px;color:var(--muted)">${s.dateCreation?.split('T')[0]||''}</div></div>
-      ${canEdit?`<div style="display:flex;gap:6px;flex-wrap:wrap">${s.refId&&s.refId!=='SUGGESTION'?`<button class="btn btn-g" style="font-size:11px;padding:5px 9px" onclick="openCorrection('${s.type}','${s.refId}','${s.id}')">✏️ Corriger</button>`:''}<button class="btn btn-g" style="font-size:11px;padding:5px 9px;background:rgba(76,175,80,.18);color:var(--success)" onclick="CORR_TGT={type:'resoudre',refId:'${s.id}',sigId:'${s.id}'};applyCorrection()">✅ Appliquer</button><button class="btn btn-i" style="font-size:11px" onclick="marquerTraite('${s.id}')">✓ Traité</button><button class="btn" style="font-size:11px;padding:5px 9px;background:rgba(224,153,51,.12);color:var(--warn)" onclick="recalcCorr('${s.id}')">🔄 Recalc</button></div>`:''}
+      ${canEdit?`<div style="display:flex;gap:6px;flex-wrap:wrap">${s.refId&&s.refId!=='SUGGESTION'?`<button class="btn btn-g" style="font-size:11px;padding:5px 9px" onclick="openCorrection('${s.type}','${s.refId}','${s.id}')">✏️ Corriger</button>`:''}<button class="btn btn-i" style="font-size:11px" onclick="marquerTraite('${s.id}')">✓ Traité</button><button class="btn" style="font-size:11px;padding:5px 9px;background:rgba(224,153,51,.12);color:var(--warn)" onclick="renderCorrections();toast('🔄 Liste actualisée')">🔄 Actualiser</button></div>`:''}
     </div>
   </div>`;
   const attAutoSigs=autoSigs.filter(s=>s.statut==='attente');
@@ -5656,6 +5656,20 @@ window.recalcCorr=val=>{
   [['cf-ac',a30],['cf-sl',s70],['cf-jr',mj]].forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.textContent=fmtFC(v);});
 };
 
+// Quand l'Admin supprime une vente erronée (correction), le mouvement de
+// stock "vendu" créé automatiquement par _doCreateVente (destUsername=
+// '__VENDU__'+venteId) n'était jamais retiré — l'unité restait comptée
+// comme vendue pour toujours, alors que la vente elle-même n'existait
+// plus. Ça faisait perdre 1 unité de stock à l'agent à chaque correction
+// de ce type, sans aucun moyen de la récupérer autrement qu'un nouveau
+// transfert manuel depuis l'Admin.
+function _restockVenteAnnulee(venteId){
+  const destock=DB.stock().find(s=>s.destUsername==='__VENDU__'+venteId);
+  if(!destock)return;
+  DB._s(K.S, DB.stock().filter(s=>s.id!==destock.id));
+  if(_SB_CONNECTED)_sbDelete('stock',destock.id).catch(()=>{});
+}
+
 window.applyCorrection=async()=>{
   if(!CORR_TGT)return;
   const{type,refId,sigId}=CORR_TGT;
@@ -5702,6 +5716,7 @@ window.applyCorrection=async()=>{
     // retire de la base locale en cascade) pour pouvoir aussi les
     // supprimer côté Supabase — sinon ils restent orphelins dans le cloud.
     const payIds=DB.pays().filter(p=>p.venteID===refId).map(p=>p.id);
+    _restockVenteAnnulee(refId);
     DB.delVente(refId);
     if(_SB_CONNECTED){
       _sbDelete('ventes',refId).catch(()=>{});
@@ -5713,7 +5728,7 @@ window.applyCorrection=async()=>{
     // en cascade, pour les supprimer aussi côté Supabase (même raison que
     // vente_del ci-dessus).
     const payIds=DB.pays().filter(p=>vIds.includes(p.venteID)).map(p=>p.id);
-    vIds.forEach(vid=>DB.delVente(vid));
+    vIds.forEach(vid=>{ _restockVenteAnnulee(vid); DB.delVente(vid); });
     DB.delClient(refId);
     if(_SB_CONNECTED){
       _sbDelete('clients',refId).catch(()=>{});

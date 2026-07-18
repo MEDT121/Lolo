@@ -4244,6 +4244,15 @@ function calcScoreRisque(clientId) {
   if (ventesAvecRetard >= 3) { score += 20; details.push(`🔄 Récidiviste : ${ventesAvecRetard} ventes en retard`); }
   else if (ventesAvecRetard >= 2) { score += 10; details.push(`🔄 2 ventes en retard sur l'historique`); }
 
+  // Un flag manuel (méfiant/difficile) doit rester un plancher, jamais
+  // effacé par le calcul automatique — sinon un client explicitement classé
+  // "difficile" par un Manager/Admin (avec une note expliquant pourquoi)
+  // pouvait redevenir invisible ("✅ Bon client") dès que ses ventes
+  // soldées faisaient suffisamment baisser le score, alors que le flag
+  // manuel restait bien enregistré en base sans plus jamais s'afficher.
+  if (c.flagManuel === 'difficile') score = Math.max(score, 45);
+  else if (c.flagManuel === 'méfiant') score = Math.max(score, 22);
+
   score = Math.max(0, Math.min(100, score));
 
   let niveau, label, couleur, icone;

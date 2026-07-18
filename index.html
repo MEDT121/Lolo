@@ -5404,7 +5404,6 @@ function renderAdminMv(){
       <div style="font-family:'Cinzel',serif;font-size:15px;color:var(--gold-l);font-weight:700">${fmtFC(v.montantTotal)}</div>
       <button class="adm-edit-btn" onclick="openCorrection('vente','${v.id}',null)">✏️</button>
       <button class="adm-edit-btn" style="color:var(--success)" onclick="adminAddPay('${v.id}')">💳</button>
-      <button class="adm-edit-btn" style="color:var(--info)" onclick="marquerTraite('${v.id}')">✓ Traité</button>
     </div></div></div>`;
   }).join(''):empty('Aucune vente');
   document.getElementById('adm-py').innerHTML=pys.length?pys.slice().reverse().map(p=>{const v=allVts.find(x=>x.id===p.venteID);const c=v?allCls.find(x=>x.id===v.clientID):null;
@@ -7597,7 +7596,11 @@ function renderCCRapport(){
 
   // Stats globales
   document.getElementById('st-ccr-tot').textContent=all.length;
-  document.getElementById('st-ccr-pdf').textContent=all.filter(c=>carteOK(c)).length;
+  // "PDF prêts" doit compter les cartes au statut PDF précisément, pas
+  // toutes les cartes validées (Oui+PDF) — sinon ce total ne correspond
+  // plus à la somme des compteurs "PDF créés" par agent juste en dessous,
+  // qui eux distinguent bien PDF de "Validée" (Oui).
+  document.getElementById('st-ccr-pdf').textContent=all.filter(c=>c.carteCreee==='PDF').length;
   document.getElementById('st-ccr-att').textContent=all.filter(c=>!carteOK(c)).length;
 
   // Peupler filtre

@@ -1132,6 +1132,12 @@ textarea.inp{resize:vertical;min-height:80px}
         <div class="stg-row" onclick="purgerPhotosArchivees()"><div class="stg-lbl">🧹 Purger photos (clients soldés)</div><span style="color:var(--muted)">›</span></div>
       </div>
       <div id="storage-diag-body" style="margin-bottom:10px"></div>
+      <div id="admin-diagnostic-card" style="display:none">
+        <div class="sec-lbl">🔍 Base de données</div>
+        <div class="stg-card">
+          <div class="stg-row" onclick="openSheet('sh-diagnostic')"><div class="stg-lbl">🔍 Diagnostic base de données</div><span style="color:var(--muted)">›</span></div>
+        </div>
+      </div>
       <div id="app-version-info" style="text-align:center;padding:18px 0 4px;font-size:10px;color:var(--muted);font-family:monospace">ZALAVRAI SYSTÈME v3.0 · Données immuables</div>
     </div>
   </div>
@@ -1414,13 +1420,10 @@ textarea.inp{resize:vertical;min-height:80px}
 <div class="sheet" id="sh-diagnostic">
   <div class="sh-handle"></div>
   <div class="sh-title">🔍 Diagnostic Base de Données</div>
+  <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.6">Outils techniques pour vérifier la cohérence de la base de données. L'archivage des anciennes données se fait automatiquement — voir le panneau <b style="color:var(--gold)">Archives</b>.</div>
   <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
     <button class="btn-gold" style="flex:1;padding:11px" onclick="diagnosticDB()">🔍 Analyser</button>
     <button class="btn" style="flex:1;padding:11px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:#22c55e" onclick="nettoyerPaiementsOrphans()">🧹 Nettoyer orphelins</button>
-  </div>
-  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-    <button class="btn" style="flex:1;padding:11px;background:rgba(201,160,48,.1);border:1px solid rgba(201,160,48,.3);color:var(--gold)" onclick="archiverVentesAnciennes(6)">🗜️ Archiver ventes &gt;6 mois</button>
-    <button class="btn" style="flex:1;padding:11px;background:rgba(229,85,85,.1);border:1px solid rgba(229,85,85,.3);color:var(--danger)" onclick="archiverVentesAnciennes(3)">🗜️ Archiver &gt;3 mois</button>
   </div>
   <div style="display:flex;gap:8px;margin-bottom:12px">
     <button class="btn" style="flex:1;padding:11px;background:rgba(201,160,48,.08);border:1px solid rgba(201,160,48,.2);color:var(--gold)" onclick="exportStockCSV()">📊 Export Stock CSV</button>
@@ -1821,7 +1824,7 @@ textarea.inp{resize:vertical;min-height:80px}
     <div id="gs-status-dot" style="width:12px;height:12px;border-radius:50%;background:#555;flex-shrink:0;box-shadow:0 0 8px currentColor;transition:.4s"></div>
     <div style="flex:1;min-width:0">
       <div id="gs-status-txt" style="font-size:13px;font-weight:700;color:var(--gold-l)">Non connecté</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:1px">Base de données cloud · chiffrement SHA-256</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:1px">Base de données cloud · synchronisation automatique</div>
     </div>
     <div style="text-align:right">
       <div id="sb-queue-count" style="font-family:monospace;font-size:13px;font-weight:700;color:var(--gold)">0</div>
@@ -1893,10 +1896,11 @@ textarea.inp{resize:vertical;min-height:80px}
       <div style="width:32px;height:32px;border-radius:50%;background:var(--gold);color:#000;font-weight:900;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
       <div>
         <div style="font-weight:700;font-size:13px;color:var(--gold-l)">Créer les tables SQL</div>
-        <div style="font-size:10px;color:var(--muted)">Copier-coller schema.sql → Run</div>
+        <div style="font-size:10px;color:var(--muted)">Fichier schema.sql fourni par votre développeur → Run</div>
       </div>
     </div>
     <div style="font-size:12px;color:var(--muted);line-height:2;padding-left:44px">
+      → Demandez le fichier <b style="color:var(--gold)">schema.sql</b> à la personne qui a installé l'app (il n'est pas dans l'app elle-même)<br>
       → Supabase → <b style="color:#fff">SQL Editor</b> → New Query<br>
       → Coller tout le contenu du fichier <b style="color:var(--gold)">schema.sql</b><br>
       → Cliquer <b style="color:#fff">▶ Run</b> → 6 tables créées<br>
@@ -1931,7 +1935,7 @@ textarea.inp{resize:vertical;min-height:80px}
   <!-- Actions rapides -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px">
     <button style="background:linear-gradient(135deg,#128C7E,#25D366);color:#fff;border:none;border-radius:12px;padding:12px 8px;font-size:12px;font-weight:700;cursor:pointer" onclick="ouvrirGroupeWA()">📲 Ouvrir notre Groupe</button>
-    <button style="background:rgba(37,211,102,0.15);color:#25D366;border:1px solid rgba(37,211,102,0.35);border-radius:12px;padding:12px 8px;font-size:12px;font-weight:700;cursor:pointer" onclick="sendPromoAll()">📢 Envoyer Promotion</button>
+    <button style="background:rgba(37,211,102,0.15);color:#25D366;border:1px solid rgba(37,211,102,0.35);border-radius:12px;padding:12px 8px;font-size:12px;font-weight:700;cursor:pointer" onclick="sendPromoAll()">📋 Copier + Promo</button>
   </div>
 
   <!-- Badge numéro business fixe -->
@@ -6999,10 +7003,14 @@ window.renderCartesAdmin = function(){
   localStorage.setItem('_zlv_carte_notifs',JSON.stringify(notifs));
   _updateCartesBadge();
 
-  const clients=DB.clients().filter(c=>carteOK(c));
+  let clients=DB.clients().filter(c=>carteOK(c));
   const el=document.getElementById('cartes-admin-list');
   if(!el)return;
   if(!clients.length){ el.innerHTML='<div style="text-align:center;padding:30px;color:var(--muted)">Aucune carte générée</div>'; return; }
+
+  const q=(document.getElementById('ca-search')?.value||'').trim().toLowerCase();
+  if(q) clients=clients.filter(c=>(c.nomComplet||'').toLowerCase().includes(q)||(c.agentUsername||'').toLowerCase().includes(q));
+  if(!clients.length){ el.innerHTML=`<div style="text-align:center;padding:30px;color:var(--muted)">Aucun résultat pour « ${q} »</div>`; return; }
 
   el.innerHTML=clients.slice().sort((a,b)=>(b.dateCreation||'').localeCompare(a.dateCreation||'')).map(c=>`
     <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg3);border-radius:10px;margin-bottom:8px">
@@ -7151,44 +7159,9 @@ window.verifierAlerteStock=function(){
 // ════════════════════════════════════════════════════════════════════════════
 // 🗜️ ARCHIVAGE & COMPRESSION — alléger Sheets + localStorage
 // ════════════════════════════════════════════════════════════════════════════
-
-window.archiverVentesAnciennes=async function(mois=6){
-  const now=new Date();
-  const limite=new Date(now.getFullYear(),now.getMonth()-mois,1).toISOString();
-  const ventes=DB.ventes();
-  const aArchiver=ventes.filter(v=>(v.dateCreation||v.dateFin||'')<limite && v.statut!=='encours');
-  if(!aArchiver.length){toast('✅ Aucune vente à archiver (< '+mois+' mois)');return;}
-  // Compresser avec LZW
-  const raw=JSON.stringify(aArchiver);
-  const compressed=lzwEncode(raw);
-  const tauxCompression=Math.round((1-compressed.length/raw.length)*100);
-  const archive={
-    id:uid('ARC'),
-    typeDonnee:'ventes',
-    label:'Ventes',
-    periode:'before-'+limite.split('T')[0],
-    cutoff:limite.split('T')[0],
-    nbLignes:aArchiver.length,
-    tailleOriginale:raw.length,
-    tailleCompresse:compressed.length,
-    tauxCompression:Math.max(0,tauxCompression),
-    donneesCompressees:compressed,
-    archiveLe:new Date().toISOString(),
-    archivePar:SESSION.username
-  };
-  // Sauvegarder la sauvegarde compressée AVANT de retirer les ventes de la
-  // liste active — sinon les données sont perdues sans être récupérables
-  // (bug corrigé : l'archive n'était jamais persistée auparavant).
-  saveLocalArchives([...getLocalArchives(), archive]);
-  // Garder seulement les ventes récentes en actif
-  const aGarder=ventes.filter(v=>!aArchiver.find(a=>a.id===v.id));
-  DB.replaceAll(K.V,aGarder);
-  DB.addSig({id:uid('SIG'),type:'archive',refId:archive.id,reporter:'SYSTÈME',
-    description:'Archive '+aArchiver.length+' ventes ('+archive.tauxCompression+'% compression)',
-    statut:'ok',dateCreation:new Date().toISOString(),dateResolution:''});
-  toast('🗜️ '+aArchiver.length+' ventes archivées ('+archive.tauxCompression+'% compression) !');
-  renderCurrent();
-};
+// L'archivage automatique (voir lancerArchivage, plus bas) couvre déjà
+// ventes/paiements/stock/signalements de plus de 30 jours, et tourne seul
+// chaque semaine à la connexion Admin — c'est le seul mécanisme d'archivage.
 
 window.nettoyerPaiementsOrphans=function(){
   const ventesIds=new Set(DB.ventes().map(v=>v.id));
@@ -7482,9 +7455,9 @@ function renderDossiers(){
   const allG=DB.clients();
   document.getElementById('st-cc-att').textContent=allG.filter(c=>!carteOK(c)).length;
   document.getElementById('st-cc-ok').textContent=allG.length;
-  document.getElementById('st-cc-pdf').textContent=allG.filter(c=>carteOK(c)).length;
+  document.getElementById('st-cc-pdf').textContent=allG.filter(c=>c.carteCreee==='PDF').length;
 
-  const mkCard=(c,done)=>{
+  const mkCard=(c)=>{
     const statut=c.carteCreee||'Non';
     const chip=statut==='PDF'
       ?`<span class="status-chip chip-pdf">📄 PDF imprimé</span>`
@@ -7505,25 +7478,20 @@ function renderDossiers(){
         <div style="font-size:10px;color:var(--gold);font-family:monospace;margin-bottom:12px">
           👤 ${c.agentUsername} · 📅 ${c.dateCreation?.split('T')[0]||'—'}${c.telephone?' · 📞'+c.telephone:''} · 🆔 ${c.id}
         </div>
-        ${!done?`
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
           <button class="btn-gold" style="padding:11px;font-size:12px;font-family:'Cinzel',serif" onclick="openClientCard('${c.id}')">🪪 Carte</button>
           <button class="btn" style="padding:11px;font-size:12px;background:rgba(224,85,85,.12);border:1.5px solid rgba(224,85,85,.3);color:var(--danger)" onclick="signalerErreurDossier('${c.id}')">⚠️ Signaler erreur</button>
-        </div>`:`
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <button class="btn-gold" style="padding:11px;font-size:12px;font-family:'Cinzel',serif" onclick="openClientCard('${c.id}')">🪪 Carte</button>
-          <button class="btn" style="padding:11px;font-size:12px;background:rgba(224,85,85,.12);border:1.5px solid rgba(224,85,85,.3);color:var(--danger)" onclick="signalerErreurDossier('${c.id}')">⚠️ Signaler erreur</button>
-        </div>`}
+        </div>
       </div>
     </div>`;
   };
 
   document.getElementById('list-dossiers-att').innerHTML=
-    att.length?att.slice().reverse().map(c=>mkCard(c,false)).join(''):
+    att.length?att.slice().reverse().map(c=>mkCard(c)).join(''):
     `<div class="empty" style="padding:40px 0"><div style="font-size:40px;margin-bottom:10px">🎉</div><div style="font-size:13px;color:var(--muted)">Aucun dossier en attente</div></div>`;
 
   document.getElementById('list-dossiers-ok').innerHTML=
-    (ok.length+pdf.length)?[...ok,...pdf].slice().reverse().map(c=>mkCard(c,true)).join(''):empty('Aucune carte validée');
+    (ok.length+pdf.length)?[...ok,...pdf].slice().reverse().map(c=>mkCard(c)).join(''):empty('Aucune carte validée');
 }
 
 window.toggleDossier=id=>{
@@ -8156,6 +8124,10 @@ function renderSettings(){
   // Section Supabase (Admin seulement)
   const sbSec=document.getElementById('admin-supabase-section');
   if(sbSec) sbSec.style.display=isAdmin?'block':'none';
+
+  // Section Diagnostic DB (Admin seulement)
+  const diagSec=document.getElementById('admin-diagnostic-card');
+  if(diagSec) diagSec.style.display=isAdmin?'block':'none';
 
   // Statut connexion Supabase dans les réglages
   if(isAdmin){
@@ -9552,6 +9524,9 @@ window.reScan=async()=>{
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
     <div style="flex:1;font-size:12px;color:var(--muted)">Téléchargez les cartes HD prêtes pour impression</div>
     <button class="btn btn-g" style="padding:7px 14px;font-size:12px" onclick="renderCartesAdmin()">🔄</button>
+  </div>
+  <div class="srch-wrap" style="margin-bottom:10px"><span class="srch-ico">🔍</span>
+    <input class="srch-inp" id="ca-search" type="search" placeholder="Rechercher un client…" oninput="renderCartesAdmin()" autocomplete="off" />
   </div>
   <div id="cartes-admin-list"></div>
   <button class="btn-ghost" style="margin-top:12px" onclick="closeSheet('sh-cartes-admin')">Fermer</button>

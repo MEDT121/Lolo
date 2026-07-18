@@ -4598,12 +4598,13 @@ function calcSoldeComplet(username,stock){
       if(mv.prixUnitaire>0)s[mv.produit].prix=mv.prixUnitaire;
       if(mv.seuilAlerte>0)s[mv.produit].seuil=mv.seuilAlerte;
     }
+    // Chaque vente crée déjà un mouvement stock sourceUsername=vendeur (voir
+    // _doCreateVente, destUsername='__VENDU__'+id) — cette ligne suffit à
+    // déduire les ventes. Il ne faut PAS les déduire une seconde fois
+    // séparément (bug corrigé : ça faisait disparaître 2 unités par vente
+    // au lieu d'1, jusqu'à bloquer des transferts/ventes sur du stock
+    // pourtant bien réel).
     if(mv.sourceUsername===username&&s[mv.produit])s[mv.produit].qty-=Number(mv.quantite);
-  });
-  // Déduire les ventes réalisées sur ce compte
-  DB.ventes().filter(v=>v.agentUsername===username||v.venduPar===username).forEach(v=>{
-    const p=v.produit; if(!p||!s[p])return;
-    s[p].qty=Math.max(0,s[p].qty-1); // 1 unité par vente
   });
   return s;
 }
@@ -5004,12 +5005,17 @@ window.openVenteSheet=()=>{
   if(isAdmin){
     // Admin : tous les produits connus + stock global (somme de tous les utilisateurs)
     const allProds=[...new Set(DB.stock().map(s=>s.produit))];
-    // Calculer le stock global restant = envoyé - vendu (pour info seulement, pas de restriction)
+    // Calculer le stock global restant = injecté par l'Admin - vendu (pour info
+    // seulement, pas de restriction). Les transferts internes (Admin→Manager→
+    // Agent, retours) ne changent pas le total en circulation, donc seuls les
+    // mouvements dont la source est un compte Admin (entrée de stock neuf) et
+    // les mouvements "vendu" (sortie du système) comptent ici.
     const globalStock={};
+    const adminUsernames=new Set(DB.users().filter(u=>u.role==='Admin').map(u=>u.username));
     DB.stock().forEach(mv=>{
       if(!globalStock[mv.produit])globalStock[mv.produit]={qty:0,prix:mv.prixUnitaire||0};
-      if(!mv.destUsername.startsWith('__VENDU__'))globalStock[mv.produit].qty+=Number(mv.quantite);
-      if(mv.sourceUsername!=='__SYSTEM__')globalStock[mv.produit].qty-=Number(mv.quantite);
+      if(adminUsernames.has(mv.sourceUsername))globalStock[mv.produit].qty+=Number(mv.quantite);
+      if(mv.destUsername&&mv.destUsername.startsWith('__VENDU__'))globalStock[mv.produit].qty-=Number(mv.quantite);
       if(mv.prixUnitaire>0)globalStock[mv.produit].prix=mv.prixUnitaire;
     });
     prods=allProds.map(p=>({nom:p,prix:globalStock[p]?.prix||0,qty:Math.max(0,globalStock[p]?.qty||0)}));

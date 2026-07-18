@@ -221,10 +221,6 @@ textarea.inp{resize:vertical;min-height:80px}
 .retard-bad{background:rgba(224,85,85,.15);color:var(--danger)}
 /* PRIX TAG */
 .prix-tag{background:var(--bg3);border:1px solid var(--gold-border);border-radius:10px;padding:8px 13px;font-size:12px;color:var(--gold);font-family:monospace;margin-bottom:10px;display:none}
-/* CODE SOURCE */
-.code-src{background:var(--bg3);border:1px solid var(--gold-border);border-radius:12px;padding:13px;font-family:monospace;font-size:9px;color:var(--muted2);line-height:1.6;white-space:pre-wrap;word-break:break-all;max-height:60vh;overflow-y:auto;margin-bottom:10px}
-.code-src::-webkit-scrollbar{width:3px}
-.code-src::-webkit-scrollbar-thumb{background:var(--gold-border)}
 /* ═══ ARCHIVES ═══ */
 .arch-stat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:13px}
 .arch-row{background:var(--bg2);border:1px solid var(--gold-border);border-radius:14px;padding:12px 15px;margin-bottom:9px;display:flex;align-items:center;gap:12px}
@@ -1080,19 +1076,6 @@ textarea.inp{resize:vertical;min-height:80px}
         <div style="font-size:10px;color:var(--muted);font-family:monospace" id="arch-count-lbl">0 paquets</div>
       </div>
       <div id="list-archives"><div style="padding:30px 0;text-align:center;color:var(--muted);font-size:13px">Aucune archive</div></div>
-    </div>
-
-    <!-- ADMIN: CODE SOURCE -->
-    <div class="panel" id="panel-admin-code">
-      <div class="stats-grid">
-        <div class="stat-c"><div class="stat-lbl">Lignes de code</div><div class="stat-val" id="st-code-lines">—</div></div>
-        <div class="stat-c"><div class="stat-lbl">Taille</div><div class="stat-val" style="font-size:16px" id="st-code-size">—</div></div>
-      </div>
-      <div class="sec-head"><div class="sec-title">Code Source Complet</div>
-        <button class="btn btn-i" onclick="copyCode()">📋 Copier</button>
-      </div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6">Code source complet de l'application en temps réel. Toutes les modifications sont reflétées ici.</div>
-      <div class="code-src" id="code-display">Chargement…</div>
     </div>
 
     <!-- SETTINGS -->
@@ -2205,6 +2188,10 @@ const DB = {
   stock()   { return this._g(K.S); },
   addStock(s){
     const arr=this.stock(); arr.push(s); this._s(K.S,arr);
+  },
+  updStock(id,patch){
+    const arr=this.stock().map(x=>x.id===id?{...x,...patch}:x);
+    this._s(K.S,arr);
   },
 
   // ── Signalements ────────────────────────────────────────────────────────
@@ -3796,7 +3783,6 @@ const NAV_CFG={
     {p:'panel-admin-mv',i:'📊',l:'Rapport'},
     {p:'panel-corrections',i:'✏️',l:'Correct.',b:'sig'},
     {p:'panel-archives',i:'🗄️',l:'Archives'},
-    {p:'panel-admin-code',i:'🖥️',l:'Code'},
     {p:'panel-settings',i:'⚙️',l:'Réglages'},
   ],
   Manager:[
@@ -3852,7 +3838,6 @@ function renderPanel(p){
     'panel-admin-ventes':()=>renderAdminVentes(''),
     'panel-admin-clients':()=>renderAdminClients(''),
     'panel-risque':()=>renderRisque(),
-    'panel-admin-code':()=>renderAdminCode(),
     'panel-archives':()=>renderArchives(),
     'panel-admin-mv':()=>renderAdminMv(),
     'panel-corrections':()=>renderCorrections(),
@@ -5491,7 +5476,10 @@ function renderAdminMv(){
     <div class="stk-row"><div><div style="font-weight:700">${s.produit}</div><div class="stk-flow">${s.sourceUsername} → ${s.destUsername} · ${s.dateMouvement?.split('T')[0]||''}</div>${s.prixUnitaire?`<div style="font-size:10px;color:var(--gold)">${fmtFC(s.prixUnitaire)}/u · Total: ${fmtFC(s.prixUnitaire*s.quantite)}</div>`:''}</div>
     <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
       <div class="stk-qty">+${s.quantite}</div>
-      <button class="adm-edit-btn" style="color:var(--danger)" onclick="if(confirm('Supprimer ce mouvement stock ?')){CORR_TGT={type:'stock_del',refId:'${s.id}',sigId:null};applyCorrection();}">🗑️</button>
+      <div style="display:flex;gap:4px">
+        <button class="adm-edit-btn" onclick="openCorrection('stock','${s.id}',null)">✏️</button>
+        <button class="adm-edit-btn" style="color:var(--danger)" onclick="if(confirm('Supprimer ce mouvement stock ?')){CORR_TGT={type:'stock_del',refId:'${s.id}',sigId:null};applyCorrection();}">🗑️</button>
+      </div>
     </div></div>`).join(''):empty('Aucun mouvement stock');
 }
 
@@ -5616,6 +5604,7 @@ function renderCorrections(){
       <span class="badge ${s.statut==='attente'?'b-warn':'b-oui'}">${s.statut==='attente'?'⏳ Attente':'✓ Résolu'}</span>
     </div>
     <div style="font-size:13px;color:var(--text);line-height:1.5;margin:5px 0">${s.description}</div>
+    ${s.statut==='resolu'&&s.resolvedBy?`<div style="font-size:10px;color:var(--success);margin-bottom:4px">✓ Corrigé par ${s.resolvedBy}</div>`:''}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
       <div><div style="font-size:10px;color:var(--gold);font-family:monospace">👤 ${s.reporter}</div><div style="font-size:10px;color:var(--muted)">${s.dateCreation?.split('T')[0]||''}</div></div>
       ${canEdit?`<div style="display:flex;gap:6px;flex-wrap:wrap">${s.refId&&s.refId!=='SUGGESTION'?`<button class="btn btn-g" style="font-size:11px;padding:5px 9px" onclick="openCorrection('${s.type}','${s.refId}','${s.id}')">✏️ Corriger</button>`:''}<button class="btn btn-g" style="font-size:11px;padding:5px 9px;background:rgba(76,175,80,.18);color:var(--success)" onclick="CORR_TGT={type:'resoudre',refId:'${s.id}',sigId:'${s.id}'};applyCorrection()">✅ Appliquer</button><button class="btn btn-i" style="font-size:11px" onclick="marquerTraite('${s.id}')">✓ Traité</button><button class="btn" style="font-size:11px;padding:5px 9px;background:rgba(224,153,51,.12);color:var(--warn)" onclick="recalcCorr('${s.id}')">🔄 Recalc</button></div>`:''}
@@ -5641,7 +5630,7 @@ function renderCorrections(){
 // Admin: marquer un signalement comme traité sans correction formelle
 window.marquerTraite=async(sigId)=>{
   const s=DB.sigs().find(x=>x.id===sigId);if(!s)return;
-  const patch={statut:'resolu',dateResolution:new Date().toISOString()};
+  const patch={statut:'resolu',dateResolution:new Date().toISOString(),resolvedBy:SESSION.username};
   DB.updSig(sigId,patch);
   const updated={...s,...patch};
   await pSig(updated);
@@ -5719,6 +5708,16 @@ window.openCorrection=(type,refId,sigId)=>{
       <button class="btn-gold" onclick="applyCorrection()">💾 Appliquer</button>
       ${delBtn('pay_del','Supprimer ce paiement')}
       <button class="btn-ghost" style="margin-top:6px" onclick="closeSheet('sh-correction')">Annuler</button>`;
+  }else if(type==='stock'){
+    const s=DB.stock().find(x=>x.id===refId);if(!s){toast('⚠️ Introuvable');return;}
+    form.innerHTML=`<div class="corr-field"><div class="corr-lbl">Mouvement stock · ${s.id}</div><div class="corr-val">${s.produit} · ${s.sourceUsername} → ${s.destUsername}</div></div>
+      <div class="fg"><label class="lbl">Produit</label><input class="inp" id="cf-sprod" value="${s.produit}" /></div>
+      <div class="fg"><label class="lbl">Quantité</label><input class="inp" id="cf-sqty" type="number" value="${s.quantite}" /></div>
+      <div class="fg"><label class="lbl">Prix unitaire (FC)</label><input class="inp" id="cf-sprix" type="number" value="${s.prixUnitaire||0}" /></div>
+      <div class="fg"><label class="lbl">Motif</label><input class="inp" id="cf-smotif" value="${s.motif||''}" /></div>
+      <button class="btn-gold" onclick="applyCorrection()">💾 Appliquer</button>
+      ${delBtn('stock_del','Supprimer ce mouvement')}
+      <button class="btn-ghost" style="margin-top:6px" onclick="closeSheet('sh-correction')">Annuler</button>`;
   }
   openSheet('sh-correction');
 };
@@ -5761,6 +5760,13 @@ window.applyCorrection=async()=>{
     const datePaiement=document.getElementById('cf-dpay').value;
     if(montantPaye<=0){toast('⚠️ Montant invalide');return;}
     DB.updPay(refId,{montantPaye,datePaiement});await pP(DB.pays().find(x=>x.id===refId));
+  }else if(type==='stock'){
+    const produit=document.getElementById('cf-sprod').value.trim();
+    const quantite=parseFloat(document.getElementById('cf-sqty').value)||0;
+    const prixUnitaire=parseFloat(document.getElementById('cf-sprix').value)||0;
+    const motif=document.getElementById('cf-smotif').value.trim();
+    if(!produit||quantite<=0){toast('⚠️ Vérifiez les champs');return;}
+    DB.updStock(refId,{produit,quantite,prixUnitaire,motif});await pS(DB.stock().find(x=>x.id===refId));
   }else if(type==='stock_del'){
     const all=DB.stock().filter(x=>x.id!==refId);
     DB._s(K.S,all);
@@ -5781,7 +5787,7 @@ window.applyCorrection=async()=>{
   }
   // Résoudre le signalement s'il existe
   if(sigId&&sigId!=='null'&&sigId!=='undefined'&&sigId){
-    DB.updSig(sigId,{statut:'resolu',dateResolution:today()});
+    DB.updSig(sigId,{statut:'resolu',dateResolution:today(),resolvedBy:SESSION.username});
     await pSig(DB.sigs().find(x=>x.id===sigId));
   }
   closeSheet('sh-correction');CORR_TGT=null;
@@ -5897,6 +5903,7 @@ function renderMgrMesClients(q=''){
           <button class="btn btn-g" style="font-size:11px;padding:6px 10px;white-space:nowrap" onclick="openClientCard('${c.id}')">🪪 Carte</button>
           <button class="btn btn-g" style="font-size:11px;padding:6px 10px;white-space:nowrap;background:rgba(100,160,240,.1);color:var(--info)" onclick="openClientHistorique('${c.id}')">📋 Hist.</button>
           ${c.telephone?`<button class="btn btn-g" style="font-size:11px;padding:6px 10px;background:rgba(37,211,102,.15);color:#25D366" onclick="sendWhatsAppWelcome(DB.clients().find(x=>x.id==='${c.id}'))">📲 WA</button>`:''}
+          ${sigBtn('client',c.id)}
         </div>
       </div>
     </div>`;
@@ -5959,6 +5966,7 @@ function renderMgrMesVentes(){
           <div style="font-size:10px;color:var(--muted)">${v.dateDebut} → ${v.dateFin}</div>
           ${reste>0?`<button class="btn-gold" style="font-size:11px;padding:6px 10px" onclick="openPayFromVente('${v.id}')">💳 Encaisser</button>`:''}
           ${reste>0&&today()>v.dateFin&&cl?.telephone?`<button class="btn" style="font-size:10px;padding:4px 8px;margin-top:2px;background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.3);color:#25D366" onclick="openRappelWA('${v.id}')">📲 Rappel WA</button>`:''}
+          ${sigBtn('vente',v.id)}
         </div>
       </div>
       <div class="amounts">
@@ -6113,8 +6121,11 @@ function renderMgrStock(){
       return`<div class="stk-row">
         <div><div style="font-weight:700;font-size:13px">${s.produit}</div>
         <div class="stk-flow" style="font-size:11px">${s.sourceUsername} → ${s.destUsername} · ${s.dateMouvement?.split('T')[0]||''}</div></div>
-        <div class="stk-qty" style="color:${isIn?'var(--success)':'var(--danger)'}">
-          <div>${isIn?'+':'-'}${s.quantite}</div><div style="font-size:9px">${isIn?'Reçu':'Envoyé'}</div></div>
+        <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end">
+          <div class="stk-qty" style="color:${isIn?'var(--success)':'var(--danger)'}">
+            <div>${isIn?'+':'-'}${s.quantite}</div><div style="font-size:9px">${isIn?'Reçu':'Envoyé'}</div></div>
+          ${sigBtn('stock',s.id)}
+        </div>
       </div>`;
     }).join(''):empty('Aucun mouvement');
 }
@@ -8509,6 +8520,7 @@ window.openSignalement=(type,refId)=>{
   if(type==='client'){const c=DB.clients().find(x=>x.id===refId);prev=c?`<div class="corr-lbl">Client</div><div class="corr-val">${c.nomComplet} · ${c.id}</div>`:`ID: ${refId}`;}
   else if(type==='vente'){const v=DB.ventes().find(x=>x.id===refId);const cl=v?DB.clients().find(c=>c.id===v.clientID):null;prev=v?`<div class="corr-lbl">Vente</div><div class="corr-val">${cl?.nomComplet||'?'} · ${v.produit} · ${fmtFC(v.montantTotal)}</div>`:`ID: ${refId}`;}
   else if(type==='paiement'){const p=DB.pays().find(x=>x.id===refId);prev=p?`<div class="corr-lbl">Paiement</div><div class="corr-val">${fmtFC(p.montantPaye)} · ${p.datePaiement}</div>`:`ID: ${refId}`;}
+  else if(type==='stock'){const s=DB.stock().find(x=>x.id===refId);prev=s?`<div class="corr-lbl">Mouvement stock</div><div class="corr-val">${s.produit} · ${s.sourceUsername} → ${s.destUsername} · ${s.quantite} u.</div>`:`ID: ${refId}`;}
   document.getElementById('sig-preview').innerHTML=prev;
   openSheet('sh-signalement');
 };
@@ -8944,34 +8956,6 @@ function prepSheet(id){
     if(qcEl){ const q=typeof _qGet==='function'?_qGet():[]; qcEl.textContent=q.filter(x=>x.status==='pending').length; }
   }
 }
-
-// ══════════════════════════════════════════════
-// ADMIN: CODE SOURCE
-// ══════════════════════════════════════════════
-function renderAdminCode(){
-  // Read the actual HTML source of the current page
-  const src=document.documentElement.outerHTML;
-  const lines=src.split('\n').length;
-  const size=(new Blob([src]).size/1024).toFixed(1);
-  document.getElementById('st-code-lines').textContent=lines.toLocaleString();
-  document.getElementById('st-code-size').textContent=size+' Ko';
-  // Escape for safe display
-  const escaped=src.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  document.getElementById('code-display').innerHTML=escaped;
-}
-
-window.copyCode=()=>{
-  const src=document.documentElement.outerHTML;
-  navigator.clipboard.writeText(src).then(()=>toast('📋 Code copié !'))
-    .catch(()=>{
-      // Fallback
-      const ta=document.createElement('textarea');
-      ta.value=src;ta.style.position='fixed';ta.style.opacity='0';
-      document.body.appendChild(ta);ta.select();
-      document.execCommand('copy');document.body.removeChild(ta);
-      toast('📋 Code copié !');
-    });
-};
 
 // ══════════════════════════════════════════════
 // CARTE MONDE SVG — injecté dans toutes les .carte-wm

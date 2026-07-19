@@ -6926,6 +6926,7 @@ async function _drawCard(c, ctx, W, H) {
   ctx.restore();
 
   const QR_DATA = 'ZALAVRAI|'+c.id+'|'+(c.nomComplet||'').replace(/\|/g,' ')+'|'+(c.telephone||'');
+  let qrDrawn = false;
   try{
     await loadQR();
     const qrInner = QR_SIZE - sx(11);
@@ -6943,15 +6944,30 @@ async function _drawCard(c, ctx, W, H) {
       const pad = sx(5.5);
       if(qrEl.tagName==='CANVAS'){
         ctx.drawImage(qrEl, QR_X+pad, QR_Y+pad, qrInner, qrInner);
+        qrDrawn = true;
       } else if(qrEl.src){
-        await new Promise((ok2,f2)=>{
-          const qi=new Image(); qi.onload=()=>{ctx.drawImage(qi,QR_X+pad,QR_Y+pad,qrInner,qrInner);ok2();};
+        await new Promise((ok2)=>{
+          const qi=new Image(); qi.onload=()=>{ctx.drawImage(qi,QR_X+pad,QR_Y+pad,qrInner,qrInner);qrDrawn=true;ok2();};
           qi.onerror=ok2; qi.src=qrEl.src;
         });
       }
     }
     document.body.removeChild(tmpDiv);
   }catch(e){ console.warn('[QR draw]',e.message); }
+
+  // Repli texte si la bibliothèque QR n'a pas pu charger (réseau lent/coupé) —
+  // la carte reste identifiable/vérifiable manuellement plutôt que d'afficher
+  // un cadre blanc vide sans explication.
+  if (!qrDrawn) {
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle=INK;
+    ctx.font=`900 ${Math.round(sx(13))}px "Nunito Sans",Arial,sans-serif`;
+    ctx.fillText(numSeq, QR_X+QR_SIZE/2, QR_Y+QR_SIZE*0.44);
+    ctx.font=`700 ${Math.round(sx(8))}px "Nunito Sans",Arial,sans-serif`;
+    ctx.fillStyle='#5a6484';
+    ctx.fillText('ZalaVrai', QR_X+QR_SIZE/2, QR_Y+QR_SIZE*0.58);
+    ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  }
 
   ctx.textAlign='center';
   ctx.font=`900 ${Math.round(sx(6.5))}px "Nunito Sans",Arial,sans-serif`;
@@ -8329,11 +8345,19 @@ let _qrLib=null,_h2cLib=null;
 
 async function loadQR(){
   if(window.QRCode)return;
-  await new Promise((res,rej)=>{
-    const s=document.createElement('script');
-    s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
-    s.onload=res;s.onerror=rej;document.head.appendChild(s);
-  });
+  // Sur un réseau mobile lent/instable, la requête vers le CDN peut ne
+  // jamais déclencher ni onload ni onerror (ni timeout, ni rejet) —
+  // sans garde-fou, tout le flux appelant (ex: téléchargement de la
+  // carte) restait bloqué indéfiniment, sans erreur ni message, comme
+  // si le bouton ne faisait plus rien.
+  await Promise.race([
+    new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+      s.onload=res;s.onerror=rej;document.head.appendChild(s);
+    }),
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error('Délai dépassé (bibliothèque QR)')),6000))
+  ]);
 }
 async function loadH2C(){
   if(window.html2canvas)return;

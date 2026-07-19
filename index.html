@@ -6689,7 +6689,7 @@ function _drawCardWatermark(ctx, img, W, H, RADIUS){
   const x0 = (W-size)/2, y0 = (H-size)/2;
   ctx.save();
   ctx.beginPath(); ctx.roundRect(0,0,W,H,RADIUS); ctx.clip();
-  ctx.globalAlpha = 0.10;
+  ctx.globalAlpha = 0.045;
   ctx.drawImage(img, x0, y0, size, size);
   ctx.restore();
 }
@@ -6803,8 +6803,8 @@ async function _drawCard(c, ctx, W, H) {
 
   // ─── 5. PHOTO CIRCULAIRE ───────────────────────────────────────────────────
   const CX = W * 0.500;
-  const CY = H * 0.382;
-  const CR = W * 0.188;   // rayon photo
+  const CY = H * 0.368;
+  const CR = W * 0.174;   // rayon photo
 
   // Halo extérieur
   const halo = ctx.createRadialGradient(CX,CY,CR*0.55,CX,CY,CR*1.65);
@@ -6860,7 +6860,7 @@ async function _drawCard(c, ctx, W, H) {
   // C'est l'information la plus importante d'une carte de membre : elle
   // doit se voir en premier, pas se perdre au milieu d'une liste de champs
   // au même poids visuel. Grand, gras, centré, avec un filet doré dessous.
-  const NAME_Y = CY + CR + W*0.155;
+  const NAME_Y = CY + CR + W*0.135;
   let nameSize = Math.round(W*0.066);
   const maxNameW = W*0.90;
   ctx.font = `900 ${nameSize}px "Arial Black",Arial,sans-serif`;
@@ -6882,14 +6882,14 @@ async function _drawCard(c, ctx, W, H) {
   // Sous-titre : activité (rôle/fonction du membre), discret sous le nom
   let subtitleH = 0;
   if (c.activite) {
-    const SUB_Y = RULE_Y + H*0.032;
-    ctx.font = `italic 400 ${Math.round(W*0.032)}px Georgia,"Times New Roman",serif`;
+    const SUB_Y = RULE_Y + H*0.028;
+    ctx.font = `italic 400 ${Math.round(W*0.030)}px Georgia,"Times New Roman",serif`;
     ctx.fillStyle = '#6a5830';
     ctx.fillText(_fitText(ctx, c.activite, maxNameW), W*0.5, SUB_Y);
-    subtitleH = H*0.032;
+    subtitleH = H*0.028;
   }
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
-  const NAME_BLOCK_BOTTOM = RULE_Y + subtitleH + H*0.030; // marge avant le bloc infos
+  const NAME_BLOCK_BOTTOM = RULE_Y + subtitleH + H*0.020; // marge avant le bloc infos
 
   // ─── 6. BLOC INFOS + QR ────────────────────────────────────────────────────
   // Numéro de carte — attribué une seule fois à la création (c.carteNum) et
@@ -6909,6 +6909,14 @@ async function _drawCard(c, ctx, W, H) {
   }
   const numSeq    = 'ZLV-' + String(c.carteNum).padStart(5,'0');
   const codeClient= String(c.carteNum).padStart(4,'0');
+
+  // Géométrie de la bande sombre du bas — calculée ici (avant le bloc infos)
+  // pour que celui-ci sache exactement jusqu'où il peut s'étendre. La bande
+  // contient désormais 2 lignes (slogan de marque + mention), donc plus
+  // haute qu'avant.
+  const BAN_H     = H*0.108;
+  const BAN_Y     = H - BAN_H - H*0.008;
+  const FOOTER_TOP= BAN_Y - H*0.010;
 
   // QR d'abord (à droite) — agrandi pour un scan rapide et fiable sur le
   // terrain (carte usée, éclairage faible, caméra bas de gamme)
@@ -6968,11 +6976,11 @@ async function _drawCard(c, ctx, W, H) {
   // toutes les informations de la carte restent présentes, rien n'est
   // supprimé, uniquement réorganisé pour une lecture plus professionnelle.
   //
-  // Enregistré par / Membre depuis / Num Service / Code client sont
-  // regroupés dans CETTE MÊME colonne (au lieu d'un bloc "footer" séparé
-  // sous le QR) : le QR code, de taille fixe pour rester scannable
-  // facilement, est plus haut que la liste d'infos courte — la place à
-  // côté de lui restait donc inutilisée.
+  // Les champs "administratifs" (Enregistré par / Membre depuis / Num
+  // Service / Code client) sont secondaires et regroupés en 2 lignes
+  // compactes sous le bloc principal, au lieu d'occuper chacun une ligne
+  // pleine taille — ça laisse le bloc principal (N° Carte, Lieu, Sexe,
+  // Actif depuis, Téléphone) suffisamment grand pour rester lisible.
   const genreTxt  = c.genre==='H'?'Masculin':c.genre==='F'?'Féminin':null;
   const depuisVal = (c.actifDepuis||c.dateCreation||'').split('T')[0].slice(0,4)||'—';
   const membreDepuis = (c.dateCreation||'').split('T')[0].replace(/-/g,'.')||'—';
@@ -6982,26 +6990,29 @@ async function _drawCard(c, ctx, W, H) {
     ...(genreTxt?[{lbl:'Sexe :',val:genreTxt}]:[]),
     {lbl:'Actif depuis :',val:depuisVal},
     ...(c.telephone?[{lbl:'Téléphone :',val:c.telephone, small:true}]:[]),
-    {lbl:'Enregistré par :', val:c.agentUsername||'—',    muted:true},
-    {lbl:'Membre depuis :',  val:membreDepuis,             muted:true},
-    {lbl:'Num Service :',    val:'+243 082842689',         muted:true, small:true},
-    {lbl:'Code client :',    val:codeClient,               muted:true},
+  ];
+  const metaLines = [
+    `Enregistré par : ${c.agentUsername||'—'}`,
+    `Membre depuis : ${membreDepuis}`,
+    `Num Service : +243 082842689`,
+    `Code client : ${codeClient}`,
   ];
 
-  // Réserve de hauteur adaptative : le nombre de lignes varie (5 à 7 selon
-  // Sexe/Téléphone), et le cadre QR (taille fixe, ne se comprime jamais)
-  // peut être plus grand que la liste elle-même. Le facteur d'échelle
-  // compare donc les deux, pour que le filet doré + la suite ne finissent
-  // jamais sous la bande sombre du bas — quel que soit le nombre de lignes.
-  const availableH  = H*0.895 - INFO_Y0;         // de INFO_Y0 (sous le nom) jusqu'à la bande sombre
+  // Réserve de hauteur adaptative : le nombre de lignes principales varie
+  // (3 à 5 selon Sexe/Téléphone), et le cadre QR (taille fixe, ne se
+  // comprime jamais) peut être plus grand que la liste elle-même. Le
+  // facteur d'échelle compare donc les deux, pour que le filet doré + la
+  // suite ne finissent jamais sous la bande sombre du bas.
+  const availableH  = FOOTER_TOP - INFO_Y0;      // de INFO_Y0 (sous le nom) jusqu'à la bande sombre
   const qrNaturalH  = QR_SIZE + QR_PAD;          // hauteur du cadre QR depuis INFO_Y0
-  const infosNaturalH = infos.length*(H*0.058);
+  const META_LH_R   = 0.026;                     // hauteur de ligne des lignes "méta", relative à H
+  const infosNaturalH = infos.length*(H*0.048) + metaLines.length*(H*META_LH_R);
   const naturalH    = Math.max(infosNaturalH, qrNaturalH) + H*0.016;
   const vScale      = Math.min(1, availableH / naturalH);
 
-  const LH       = H * 0.058 * vScale;   // hauteur de ligne (infos)
-  const LBL_SIZE = Math.round(W*0.033 * vScale);
-  const VAL_SIZE = Math.round(W*0.033 * vScale);
+  const LH       = H * 0.048 * vScale;   // hauteur de ligne (infos principales)
+  const LBL_SIZE = Math.round(W*0.036 * vScale);
+  const VAL_SIZE = Math.round(W*0.036 * vScale);
 
   infos.forEach((info,i)=>{
     const y = INFO_Y0 + i*LH;
@@ -7012,17 +7023,17 @@ async function _drawCard(c, ctx, W, H) {
       ctx.beginPath(); ctx.roundRect(INFO_X-W*0.01, y-LH*0.72, INFO_MAXW+W*0.02, LH*0.88, W*0.010); ctx.fill();
     }
 
-    // Label (gras noir, ou gris discret pour les champs administratifs)
+    // Label (gras noir)
     ctx.font=`700 ${LBL_SIZE}px Arial,sans-serif`;
-    ctx.fillStyle = info.muted ? GRAY : BLACK;
+    ctx.fillStyle = BLACK;
     ctx.textAlign='left'; ctx.textBaseline='alphabetic';
     ctx.fillText(info.lbl, INFO_X, y);
     const lblW = ctx.measureText(info.lbl+' ').width;
 
     // Valeur
-    const vSize = info.small ? Math.round(W*0.028*vScale) : VAL_SIZE;
+    const vSize = info.small ? Math.round(W*0.031*vScale) : VAL_SIZE;
     ctx.font=`${info.bold?'700':'400'} ${vSize}px Arial,sans-serif`;
-    ctx.fillStyle = info.gold ? GOLD : (info.muted ? BLACK : BLACK);
+    ctx.fillStyle = info.gold ? GOLD : BLACK;
 
     // Tronquer si trop long
     const maxW = INFO_MAXW - lblW - W*0.01;
@@ -7030,11 +7041,22 @@ async function _drawCard(c, ctx, W, H) {
     ctx.fillText(val, INFO_X+lblW, y);
   });
 
+  // Lignes "méta" compactes (infos administratives secondaires)
+  const META_LH   = H * META_LH_R * vScale;
+  const META_SIZE = Math.round(W*0.026 * vScale);
+  ctx.font = `400 ${META_SIZE}px Arial,sans-serif`;
+  ctx.fillStyle = GRAY;
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  const metaY0 = INFO_Y0 + infos.length*LH + META_LH*0.65;
+  metaLines.forEach((line,i)=>{
+    ctx.fillText(_fitText(ctx, line, INFO_MAXW), INFO_X, metaY0 + i*META_LH);
+  });
+
   // ─── 7. SÉPARATEUR AVANT LA BANDE SOMBRE ───────────────────────────────────
   // Doit passer sous le plus grand des deux blocs (liste d'infos OU cadre
   // QR) — sinon, avec une liste raccourcie, le filet doré traversait le
   // cadre du QR code au lieu de rester en dessous.
-  const infosBottom = INFO_Y0 + infos.length*LH;
+  const infosBottom = metaY0 + metaLines.length*META_LH;
   const qrBottom     = QR_Y + QR_SIZE + QR_PAD*2;
   const SEP_Y = Math.max(infosBottom, qrBottom) + H*0.012*vScale;
   const sepG2=ctx.createLinearGradient(INFO_X,0,W-INFO_X,0);
@@ -7047,23 +7069,22 @@ async function _drawCard(c, ctx, W, H) {
   ctx.beginPath(); ctx.moveTo(INFO_X,SEP_Y); ctx.lineTo(W-INFO_X,SEP_Y); ctx.stroke();
 
   // ─── 9. BANDE SOMBRE + SLOGAN ──────────────────────────────────────────────
-  const BAN_H = H*0.088;
-  const BAN_Y = H - BAN_H - H*0.008;
-
+  // (BAN_H / BAN_Y déjà calculés plus haut, avant le bloc infos, pour que
+  // celui-ci connaisse la limite basse disponible)
   ctx.fillStyle=DARK_BG;
   ctx.beginPath();
   ctx.roundRect(W*0.014, BAN_Y, W*0.972, BAN_H,
     {upperLeft:0,upperRight:0,lowerLeft:RADIUS*0.82,lowerRight:RADIUS*0.82});
   ctx.fill();
 
-  // Mention doré italique centrée — le slogan de marque ("Totambola na
-  // bosolo — Zéro trahison") est désormais déjà présent dans le logo
-  // officiel affiché en en-tête ; le répéter ici ferait doublon, donc ce
-  // bandeau précise plutôt la nature du document.
-  ctx.font=`italic 600 ${Math.round(W*0.042)}px Georgia,"Times New Roman",serif`;
-  ctx.fillStyle=GOLD_L;
+  // Slogan de marque, puis mention du type de document
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText('Carte de Membre Officielle', W*0.5, BAN_Y+BAN_H*0.52);
+  ctx.font=`italic 700 ${Math.round(W*0.036)}px Georgia,"Times New Roman",serif`;
+  ctx.fillStyle=GOLD_L;
+  ctx.fillText('Totambola Na Bosolo  —  Zéro Trahison', W*0.5, BAN_Y+BAN_H*0.36);
+  ctx.font=`italic 400 ${Math.round(W*0.028)}px Georgia,"Times New Roman",serif`;
+  ctx.fillStyle='rgba(240,208,96,0.75)';
+  ctx.fillText('Carte de Membre Officielle', W*0.5, BAN_Y+BAN_H*0.72);
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
 }
 

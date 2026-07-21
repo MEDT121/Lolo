@@ -1174,8 +1174,8 @@ textarea.inp{resize:vertical;min-height:80px}
 </div>
 
 <!-- RECADRAGE PHOTO — partagé par tous les points d'upload (client, profil) -->
-<div class="overlay" id="ov-sh-photo-crop"></div>
-<div class="sheet" id="sh-photo-crop">
+<div class="overlay" id="ov-sh-photo-crop" style="z-index:150"></div>
+<div class="sheet" id="sh-photo-crop" style="z-index:151">
   <div class="sh-handle"></div>
   <div class="sh-title">🖼️ Recadrer la photo</div>
   <div id="crop-viewport" style="width:240px;height:240px;max-width:100%;margin:0 auto 16px;border-radius:18px;overflow:hidden;background:#000;position:relative;border:2px solid var(--gold-border);touch-action:none;cursor:grab">
@@ -4002,17 +4002,16 @@ window.applyPhotoPreview=(input,prevId,dataId,icoId)=>{
   const objUrl=URL.createObjectURL(file);
   img.onerror=()=>{ URL.revokeObjectURL(objUrl); toast('⚠️ Impossible de lire l\'image'); input.value=''; };
   img.onload=()=>{
-    URL.revokeObjectURL(objUrl);
-    _openPhotoCrop(img,input,prevId,dataId,icoId);
+    _openPhotoCrop(img,objUrl,input,prevId,dataId,icoId);
   };
   img.src=objUrl;
 };
 
-function _openPhotoCrop(img,input,prevId,dataId,icoId){
+function _openPhotoCrop(img,objUrl,input,prevId,dataId,icoId){
   const VIEW=240;
   const minScale=VIEW/Math.min(img.naturalWidth,img.naturalHeight);
   _cropState={
-    img, input, prevId, dataId, icoId, VIEW, minScale,
+    img, objUrl, input, prevId, dataId, icoId, VIEW, minScale,
     scale:minScale,
     offX:(VIEW-img.naturalWidth*minScale)/2,
     offY:(VIEW-img.naturalHeight*minScale)/2,
@@ -4081,15 +4080,17 @@ window.confirmPhotoCrop=()=>{
   const sx=-s.offX/s.scale, sy=-s.offY/s.scale, sSize=s.VIEW/s.scale;
   ctx.drawImage(s.img,sx,sy,sSize,sSize,0,0,OUT,OUT);
   const compressed=canvas.toDataURL('image/jpeg',0.72);
-  const {input,prevId,dataId,icoId}=s;
+  const {input,prevId,dataId,icoId,objUrl}=s;
   closeSheet('sh-photo-crop');
   _cropState=null;
   if(input) input.value='';
+  if(objUrl) URL.revokeObjectURL(objUrl);
   _finalizePhotoPreview(compressed,prevId,dataId,icoId);
 };
 window.cancelPhotoCrop=()=>{
   const s=_cropState;
   if(s&&s.input) s.input.value='';
+  if(s&&s.objUrl) URL.revokeObjectURL(s.objUrl);
   _cropState=null;
   closeSheet('sh-photo-crop');
 };

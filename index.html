@@ -875,12 +875,12 @@ textarea.inp{resize:vertical;min-height:80px}
         <div class="stat-c"><div class="stat-lbl">Total FC</div><div class="stat-val" style="font-size:15px" id="st-ag-fc">—</div></div>
       </div>
       <div id="st-ag-vt-detail" style="display:flex;gap:8px;font-size:11px;font-family:monospace;padding:4px 0 6px;flex-wrap:wrap"></div>
-      <div class="sec-head">
-        <div class="sec-title">Mes Ventes</div>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-i" style="font-size:11px;padding:7px 10px" onclick="exportAgtRapport('csv')">📥 CSV</button>
-          <button class="btn btn-g" style="font-size:11px;padding:7px 10px" onclick="exportAgtRapport('pdf')">📄 PDF</button>
-          <button class="btn btn-g" onclick="openVenteSheet()">+ Nouvelle</button>
+      <div style="margin:14px 0 10px">
+        <div class="sec-title" style="margin-bottom:8px">Mes Ventes</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px">
+          <button class="btn btn-i" style="padding:9px 4px;font-size:11px" onclick="exportAgtRapport('csv')">📥 CSV</button>
+          <button class="btn btn-g" style="padding:9px 4px;font-size:11px" onclick="exportAgtRapport('pdf')">📄 PDF</button>
+          <button class="btn btn-g" style="padding:9px 4px;font-size:11px" onclick="openVenteSheet()">+ Nouvelle</button>
         </div>
       </div>
       <div id="list-agt-ventes"></div>

@@ -90,6 +90,10 @@ textarea.inp{resize:vertical;min-height:80px}
 .nav-tab .ti{font-size:20px;line-height:1.1}
 .nav-tab.active{color:var(--gold-l);background:var(--gold-pale)}
 .nav-badge{position:absolute;top:2px;right:2px;background:var(--danger);color:#fff;font-size:8px;font-weight:700;border-radius:10px;padding:1px 4px;font-family:monospace;line-height:1.4}
+.more-menu-item{display:flex;align-items:center;gap:14px;width:100%;padding:15px 4px;background:none;border:none;border-bottom:1px solid rgba(201,160,48,.10);color:var(--text);font-size:14.5px;font-weight:700;text-align:left;cursor:pointer}
+.more-menu-item:last-child{border-bottom:none}
+.more-menu-ic{font-size:20px;width:26px;text-align:center;flex-shrink:0}
+.more-menu-badge{margin-left:auto;background:var(--danger);color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:2px 8px;font-family:monospace}
 /* PANELS */
 .panel{display:none}
 .panel.active{display:block;animation:fadeUp .22s ease}
@@ -1143,6 +1147,15 @@ textarea.inp{resize:vertical;min-height:80px}
     </div>
   </div>
   <nav class="app-nav" id="app-nav"></nav>
+</div>
+
+<!-- MENU "PLUS" — sections secondaires, pour ne pas surcharger la barre du bas -->
+<div class="overlay" id="ov-sh-more-menu" onclick="closeSheet('sh-more-menu')"></div>
+<div class="sheet" id="sh-more-menu">
+  <div class="sh-handle"></div>
+  <div class="sh-title">⋯ Plus</div>
+  <div id="more-menu-list"></div>
+  <button class="btn-ghost" style="margin-top:8px" onclick="closeSheet('sh-more-menu')">Fermer</button>
 </div>
 
 <!-- ═══ SCANNER QR ═══ -->
@@ -3725,6 +3738,12 @@ window.addEventListener('popstate',e=>{
 // ══════════════════════════════════════════════
 // NAV
 // ══════════════════════════════════════════════
+// Chaque onglet peut porter `more:true` : il n'apparaît alors pas
+// directement dans la barre du bas (qui débordait horizontalement —
+// jusqu'à 12 onglets pour Admin sur un écran de 390px, avec Réglages,
+// Archives et Correct. totalement hors champ, invisibles sans faire
+// défiler) mais dans le menu "⋯ Plus", pour que les sections les plus
+// utilisées au quotidien restent toutes visibles sans défilement.
 const NAV_CFG={
   Admin:[
     {p:'panel-admin-dashboard',i:'🏠',l:'Accueil'},
@@ -3732,13 +3751,13 @@ const NAV_CFG={
     {p:'panel-stock-admin',i:'📦',l:'Stock'},
     {p:'panel-admin-clients',i:'🧑',l:'Clients'},
     {p:'panel-risque',i:'🚨',l:'Risques',b:'rsk'},
-    {p:'panel-dossiers',i:'🃏',l:'Cartes'},
-    {p:'panel-cc-rapport',i:'📋',l:'Rap.Carte'},
     {p:'panel-admin-ventes',i:'💼',l:'Ventes'},
-    {p:'panel-admin-mv',i:'📊',l:'Rapport'},
-    {p:'panel-corrections',i:'✏️',l:'Correct.',b:'sig'},
-    {p:'panel-archives',i:'🗄️',l:'Archives'},
-    {p:'panel-settings',i:'⚙️',l:'Réglages'},
+    {p:'panel-dossiers',i:'🃏',l:'Cartes',more:true},
+    {p:'panel-cc-rapport',i:'📋',l:'Rap.Carte',more:true},
+    {p:'panel-admin-mv',i:'📊',l:'Rapport',more:true},
+    {p:'panel-corrections',i:'✏️',l:'Correct.',b:'sig',more:true},
+    {p:'panel-archives',i:'🗄️',l:'Archives',more:true},
+    {p:'panel-settings',i:'⚙️',l:'Réglages',more:true},
   ],
   Manager:[
     {p:'panel-mgr-agents',i:'🧑‍💼',l:'Agents'},
@@ -3747,8 +3766,8 @@ const NAV_CFG={
     {p:'panel-mgr-ventes',i:'💼',l:'Ventes'},
     {p:'panel-mgr-pays',i:'💳',l:'Paiements'},
     {p:'panel-mgr-stock',i:'📦',l:'Stock'},
-    {p:'panel-suggestions',i:'✉️',l:'Signaler',b:'sug'},
-    {p:'panel-settings',i:'⚙️',l:'Réglages'},
+    {p:'panel-suggestions',i:'✉️',l:'Signaler',b:'sug',more:true},
+    {p:'panel-settings',i:'⚙️',l:'Réglages',more:true},
   ],
   Agent:[
     {p:'panel-agt-clients',i:'🧑',l:'Clients'},
@@ -3765,20 +3784,70 @@ const NAV_CFG={
     {p:'panel-settings',i:'⚙️',l:'Réglages'},
   ],
 };
-function buildNav(){
-  const tabs=NAV_CFG[SESSION.role]||[];
-  document.getElementById('app-nav').innerHTML=tabs.map(t=>`
+let _NAV_SECONDARY=[];
+// Dernière valeur connue de chaque badge (clé -> nombre), indépendamment du
+// DOM : les badges des onglets secondaires n'existent dans le DOM que
+// pendant que le menu "Plus" est ouvert (leur liste est reconstruite à
+// chaque ouverture), donc on ne peut pas se fier à un élément existant
+// pour savoir si un badge est "en attente" avant la toute première
+// ouverture du menu.
+let _BADGE_STATE={};
+function _navTabHtml(t){
+  return `
     <button class="nav-tab" data-p="${t.p}" onclick="navigate('${t.p}')">
       <span class="ti">${t.i}</span>${t.l}
-      ${t.b?`<span class="nav-badge" id="nb-${t.b}" style="display:none">0</span>`:''}
-    </button>`).join('');
+      ${t.b?`<span class="nav-badge" data-badge-key="${t.b}" style="display:none">0</span>`:''}
+    </button>`;
 }
-function updBadge(key,n){const el=document.getElementById('nb-'+key);if(!el)return;el.textContent=n;el.style.display=n>0?'':'none';}
+function buildNav(){
+  const tabs=NAV_CFG[SESSION.role]||[];
+  const primary=tabs.filter(t=>!t.more);
+  _NAV_SECONDARY=tabs.filter(t=>t.more);
+  let html=primary.map(_navTabHtml).join('');
+  if(_NAV_SECONDARY.length){
+    html+=`
+    <button class="nav-tab" data-more="1" onclick="openMoreMenu()">
+      <span class="ti">⋯</span>Plus
+      <span class="nav-badge" id="nb-more" style="display:none">•</span>
+    </button>`;
+  }
+  document.getElementById('app-nav').innerHTML=html;
+  _refreshMoreBadge();
+}
+function _refreshMoreBadge(){
+  const dot=document.getElementById('nb-more');
+  if(!dot)return;
+  const anyPending=_NAV_SECONDARY.some(t=>t.b&&(_BADGE_STATE[t.b]||0)>0);
+  dot.style.display=anyPending?'':'none';
+}
+window.openMoreMenu=()=>{
+  document.getElementById('more-menu-list').innerHTML=_NAV_SECONDARY.map(t=>{
+    const n=t.b?(_BADGE_STATE[t.b]||0):0;
+    return `
+    <button class="more-menu-item" onclick="navigateFromMore('${t.p}')">
+      <span class="more-menu-ic">${t.i}</span>
+      <span>${t.l}</span>
+      ${t.b?`<span class="more-menu-badge" data-badge-key="${t.b}" style="display:${n>0?'':'none'}">${n}</span>`:''}
+    </button>`;
+  }).join('');
+  openSheet('sh-more-menu');
+};
+window.navigateFromMore=p=>{closeSheet('sh-more-menu');navigate(p);};
+function updBadge(key,n){
+  _BADGE_STATE[key]=n;
+  document.querySelectorAll(`[data-badge-key="${key}"]`).forEach(el=>{
+    el.textContent=n;el.style.display=n>0?'':'none';
+  });
+  _refreshMoreBadge();
+}
 function goFirst(){const tabs=NAV_CFG[SESSION.role]||[];if(tabs.length)navigate(tabs[0].p);}
 window.navigate=p=>{
   document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
   document.getElementById(p)?.classList.add('active');
-  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.toggle('active',t.dataset.p===p));
+  const isSecondary=_NAV_SECONDARY.some(t=>t.p===p);
+  document.querySelectorAll('.nav-tab').forEach(t=>{
+    t.classList.toggle('active', t.dataset.more?isSecondary:t.dataset.p===p);
+  });
   CUR_PANEL=p;renderPanel(p);
 };
 function renderCurrent(){

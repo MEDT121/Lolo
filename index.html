@@ -3031,18 +3031,18 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Auto-pull toutes les 90s si en ligne — c'était toutes les 3 min avec un
+// Auto-pull toutes les 30s si en ligne — c'était toutes les 3 min avec un
 // pull réel au mieux une fois sur deux (throttle à 5 min), donc jusqu'à
 // 10 minutes de retard possible sur les données des autres utilisateurs.
 function _autoSyncTick() {
   if (_SB_CONNECTED && navigator.onLine) {
     processOutbox().catch(() => {});
-    if (!window._lastPullTime || Date.now() - window._lastPullTime > 90 * 1000) {
+    if (!window._lastPullTime || Date.now() - window._lastPullTime > 30 * 1000) {
       _pullSheets().catch(() => {});
     }
   }
 }
-setInterval(_autoSyncTick, 90 * 1000);
+setInterval(_autoSyncTick, 30 * 1000);
 
 // Resynchroniser immédiatement dès que l'app revient au premier plan ou que
 // la connexion réseau revient — le cas le plus fréquent de "données en

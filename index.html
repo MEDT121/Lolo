@@ -7777,13 +7777,19 @@ function renderCCRapport(){
   document.getElementById('list-cc-rapport').innerHTML=html||empty('Aucun dossier');
 }
 
-window.exportRapportCartesCSV=async()=>{
-  const agFilter=document.getElementById('ccr-agent-filter')?.value||'';
+// Génère le CSV des dossiers cartes filtré par agent — factorisé car les
+// panneaux "Cartes" et "Rapport" exportaient chacun leur propre copie de
+// cette même liste de colonnes.
+async function _exportCartesCSV(agFilter,filePrefix){
   const clients=DB.clients().filter(c=>!agFilter||c.agentUsername===agFilter);
   await dlCSV([
     ['ID','Nom complet','Téléphone','Agent','Lieu','Activité','Date création','Statut carte'],
     ...clients.map(c=>[c.id,c.nomComplet,c.telephone||'',c.agentUsername,c.lieuActivite||'',c.activite||'',c.dateCreation?.split('T')[0]||'',c.carteCreee||'Non'])
-  ],`rapport_cartes${agFilter?'_'+agFilter:''}_${today()}.csv`);
+  ],`${filePrefix}${agFilter?'_'+agFilter:''}_${today()}.csv`);
+}
+window.exportRapportCartesCSV=async()=>{
+  const agFilter=document.getElementById('ccr-agent-filter')?.value||'';
+  await _exportCartesCSV(agFilter,'rapport_cartes');
   toast('📥 CSV rapport cartes enregistré !');
 };
 
@@ -7875,20 +7881,7 @@ window.exportRapportCartesPDF=async()=>{
 // ── Export CSV dossiers (cartes) ──
 window.exportCSVDossiers=async()=>{
   const agFilter=document.getElementById('dos-agent-filter')?.value||'';
-  const clients=DB.clients().filter(c=>!agFilter||c.agentUsername===agFilter);
-  await dlCSV([
-    ['ID','Nom complet','Téléphone','Agent','Lieu activité','Activité','Date création','Statut carte'],
-    ...clients.map(c=>[
-      c.id,
-      c.nomComplet,
-      c.telephone||'',
-      c.agentUsername,
-      c.lieuActivite||'',
-      c.activite||'',
-      c.dateCreation?.split('T')[0]||'',
-      c.carteCreee||'Non'
-    ])
-  ],`dossiers_cartes${agFilter?'_'+agFilter:''}_${today()}.csv`);
+  await _exportCartesCSV(agFilter,'dossiers_cartes');
   toast('📥 CSV dossiers enregistré !');
 };
 
@@ -8046,130 +8039,11 @@ window.activerCarte=async id=>{
 // ══════════════════════════════════════════════
 // EXPORT AGENT — CSV & PDF RAPPORT PERSONNEL
 // ══════════════════════════════════════════════
-window.exportAgtRapport=async(type)=>{
-  const ag=SESSION.username;
-  const ventes=DB.ventes().filter(v=>v.agentUsername===ag);
-  const pays=DB.pays().filter(p=>p.agentUsername===ag);
-  const clients=DB.clients().filter(c=>c.agentUsername===ag);
-
-  if(type==='csv'){
-    // 3 fichiers CSV séparés — chacun dans son propre fichier propre
-    await csvV(ag);
-    await csvP(ag);
-    await csvC(ag);
-    toast('📥 3 fichiers CSV enregistrés !');
-    return;
-  }
-
-  // PDF — générer via jsPDF (compatible mobile)
-  toast('⏳ Génération du rapport PDF…');
-  try{
-    await loadJsPDF();
-    const{jsPDF}=window.jspdf;
-    const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    const pW=210,pM=14;
-    let y=0;
-    const addPage=()=>{pdf.addPage();y=14;};
-    const checkY=(need=15)=>{if(y+need>282)addPage();};
-
-    const totalCA=ventes.reduce((s,v)=>s+Number(v.montantTotal||0),0);
-    const totalEncaisse=pays.reduce((s,p)=>s+Number(p.montantPaye||0),0);
-    const totalSolde=ventes.reduce((s,v)=>s+Number(v.solde70||0),0);
-    const totalReste=Math.max(0,totalSolde-totalEncaisse);
-    const nbEnCours=ventes.filter(v=>{const dp=pays.filter(p=>p.venteID===v.id).reduce((s,p)=>s+Number(p.montantPaye||0),0);return Math.max(0,Number(v.solde70||0)-dp)>0;}).length;
-    const nbRetard=ventes.filter(v=>{const dp=pays.filter(p=>p.venteID===v.id).reduce((s,p)=>s+Number(p.montantPaye||0),0);return Math.max(0,Number(v.solde70||0)-dp)>0&&today()>v.dateFin;}).length;
-
-    // Header
-    pdf.setFillColor(20,14,3);pdf.rect(0,0,pW,32,'F');
-    pdf.setDrawColor(201,160,48);pdf.setLineWidth(.7);pdf.line(0,32,pW,32);
-    pdf.setFont('helvetica','bold');pdf.setFontSize(20);pdf.setTextColor(201,160,48);
-    pdf.text('ZALAVRAI',pM,14);
-    pdf.setFontSize(8);pdf.setTextColor(140,110,50);pdf.text("RAPPORT PERSONNEL DE L'AGENT",pM,20);
-    pdf.setFontSize(7);pdf.setTextColor(100,85,40);pdf.text(ag.toUpperCase()+' · '+today(),pM,26);
-    y=42;
-
-    // Stats
-    const stats=[['Clients',clients.length],['Ventes',ventes.length],['CA Total FC',fmtFC(totalCA)],['Encaissé FC',fmtFC(totalEncaisse)],['Reste dû FC',fmtFC(totalReste)],['En cours',nbEnCours],['⚠️ Retards',nbRetard],['Paiements',pays.length]];
-    const gW=(pW-pM*2)/4,gH=16;
-    stats.forEach(([lbl,val],i)=>{
-      const gx=pM+(i%4)*gW,gy=y+Math.floor(i/4)*gH;
-      pdf.setFillColor(18,13,3);pdf.roundedRect(gx,gy-4,gW-2,gH-2,2,2,'F');
-      pdf.setDrawColor(50,38,12);pdf.setLineWidth(.15);pdf.roundedRect(gx,gy-4,gW-2,gH-2,2,2,'S');
-      pdf.setFont('helvetica','bold');pdf.setFontSize(10);
-      const isRed=lbl.includes('Retard')||lbl.includes('Reste');
-      pdf.setTextColor(isRed?200:180,isRed?80:155,isRed?48:50);
-      pdf.text(String(val),gx+(gW-2)/2,gy+2,{align:'center'});
-      pdf.setFont('helvetica','normal');pdf.setFontSize(6.5);pdf.setTextColor(106,88,48);
-      pdf.text(lbl,gx+(gW-2)/2,gy+8,{align:'center'});
-    });
-    y+=36;
-
-    // Section ventes
-    checkY(20);
-    pdf.setFont('helvetica','bold');pdf.setFontSize(9);pdf.setTextColor(201,160,48);
-    pdf.text('MES VENTES',pM,y);
-    pdf.setFont('helvetica','normal');pdf.setFontSize(7);pdf.setTextColor(80,65,25);
-    pdf.text(ventes.length+' vente(s)',pW-pM,y,{align:'right'});
-    y+=5;
-    // Table header
-    pdf.setFillColor(25,18,4);pdf.rect(pM,y-3,pW-pM*2,7,'F');
-    const vC=[pM+1,pM+42,pM+80,pM+110,pM+136,pM+158,pW-pM-1];
-    ['Client','Produit','Total FC','Acompte','Solde 70%','Fin','Statut'].forEach((h,i)=>{
-      pdf.setFont('helvetica','bold');pdf.setFontSize(7);pdf.setTextColor(201,160,48);
-      pdf.text(h,vC[i],y);
-    });
-    y+=7;
-    ventes.slice().reverse().forEach(v=>{
-      checkY(8);
-      const cl=clients.find(c=>c.id===v.clientID);
-      const dp=pays.filter(p=>p.venteID===v.id).reduce((s,p)=>s+Number(p.montantPaye||0),0);
-      const reste=Math.max(0,Number(v.solde70||0)-dp);
-      const stat=reste<=0?'✓ Soldé':today()>v.dateFin?'⚠ Retard':'Encours';
-      const isRed=today()>v.dateFin&&reste>0,isGreen=reste<=0;
-      [[(cl?.nomComplet||'—').slice(0,16),(v.produit||'—').slice(0,15),fmtFC(v.montantTotal).slice(0,10),fmtFC(v.acompte30).slice(0,9),fmtFC(v.solde70).slice(0,9),(v.dateFin||'—'),stat]].flat().forEach((cell,i)=>{
-        pdf.setFont('helvetica','normal');pdf.setFontSize(7);
-        pdf.setTextColor(i===6&&isGreen?40:i===6&&isRed?180:160,i===6&&isGreen?140:i===6&&isRed?40:130,50);
-        pdf.text(String(cell),vC[i],y);
-      });
-      pdf.setDrawColor(30,22,6);pdf.setLineWidth(.1);pdf.line(pM,y+2,pW-pM,y+2);
-      y+=7;
-    });
-
-    // Section paiements
-    y+=5;checkY(20);
-    pdf.setFont('helvetica','bold');pdf.setFontSize(9);pdf.setTextColor(201,160,48);
-    pdf.text('MES PAIEMENTS ('+pays.length+')',pM,y);y+=5;
-    pdf.setFillColor(25,18,4);pdf.rect(pM,y-3,pW-pM*2,7,'F');
-    const pCols=[pM+1,pM+32,pM+92,pW-pM-1];
-    ['Date','Client · Produit','Montant FC'].forEach((h,i)=>{
-      pdf.setFont('helvetica','bold');pdf.setFontSize(7);pdf.setTextColor(201,160,48);
-      pdf.text(h,pCols[i],y);
-    });
-    y+=7;
-    pays.slice().reverse().slice(0,80).forEach(p=>{
-      checkY(7);
-      const v2=ventes.find(x=>x.id===p.venteID);
-      const cl=v2?clients.find(c=>c.id===v2.clientID):null;
-      pdf.setFont('helvetica','normal');pdf.setFontSize(7);pdf.setTextColor(160,130,60);
-      pdf.text(p.datePaiement||'—',pCols[0],y);
-      pdf.text(((cl?.nomComplet||'—')+' · '+(v2?.produit||'—')).slice(0,40),pCols[1],y);
-      pdf.setTextColor(80,160,80);pdf.text('+'+fmtFC(p.montantPaye),pCols[2],y,{align:'right'});
-      pdf.setDrawColor(30,22,6);pdf.setLineWidth(.1);pdf.line(pM,y+2,pW-pM,y+2);
-      y+=7;
-    });
-
-    // Footer
-    pdf.setFont('helvetica','normal');pdf.setFontSize(7);pdf.setTextColor(70,55,20);
-    pdf.text('ZALAVRAI SYSTÈME · Rapport confidentiel · '+ag.toUpperCase()+' · '+today(),pW/2,290,{align:'center'});
-
-    const fname=`ZALAVRAI_Rapport_${ag}_${today()}.pdf`;
-    await dlPDF(pdf,fname);
-    toast('📥 Rapport PDF généré !');
-  }catch(e){
-    console.warn('exportAgtRapport PDF error:',e);
-    toast('⚠️ Erreur PDF — vérifiez la connexion');
-  }
-};
+// Les boutons CSV/PDF de "Mes Ventes" faisaient exactement le même travail
+// que ceux du panneau "Rapport" (deux générateurs PDF réécrits séparément
+// pour le même contenu) — un seul bouton pratique à deux endroits, une
+// seule implémentation, pour éviter que les deux finissent par diverger.
+window.exportAgtRapport=async(type)=>type==='csv'?exportAgentCSV():exportAgentPDF();
 
 // ══════════════════════════════════════════════
 // FICHE CARTE HD — Sauvegarde dans profil CréateurCarte

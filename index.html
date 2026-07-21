@@ -701,11 +701,11 @@ textarea.inp{resize:vertical;min-height:80px}
         <button class="btn btn-i" style="padding:9px 4px;font-size:11px;border-radius:10px" onclick="exportAllCSV()">📦 Tout CSV</button>
         <button class="btn btn-g" style="padding:9px 4px;font-size:11px;border-radius:10px" onclick="exportJSON()">💾 JSON</button>
       </div>
-      <div class="tabs" id="mv-tabs">
-        <button class="tab active" onclick="switchTab('mv-tabs','mv-pnls',this,'mv-clients')">🧑 Clients</button>
-        <button class="tab" onclick="switchTab('mv-tabs','mv-pnls',this,'mv-ventes')">💼 Ventes</button>
-        <button class="tab" onclick="switchTab('mv-tabs','mv-pnls',this,'mv-pays')">💳 Paiements</button>
-        <button class="tab" onclick="switchTab('mv-tabs','mv-pnls',this,'mv-stock')">📦 Stock</button>
+      <div class="tabs" id="mv-tabs" style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;overflow:visible;mask-image:none;-webkit-mask-image:none">
+        <button class="tab active" style="text-align:center;padding:7px 2px" onclick="switchTab('mv-tabs','mv-pnls',this,'mv-clients')">🧑 Clients</button>
+        <button class="tab" style="text-align:center;padding:7px 2px" onclick="switchTab('mv-tabs','mv-pnls',this,'mv-ventes')">💼 Ventes</button>
+        <button class="tab" style="text-align:center;padding:7px 2px" onclick="switchTab('mv-tabs','mv-pnls',this,'mv-pays')">💳 Paiements</button>
+        <button class="tab" style="text-align:center;padding:7px 2px" onclick="switchTab('mv-tabs','mv-pnls',this,'mv-stock')">📦 Stock</button>
       </div>
       <div id="mv-pnls">
         <div class="tab-content active" id="mv-clients"><div id="adm-cl"></div></div>

@@ -589,6 +589,7 @@ textarea.inp{resize:vertical;min-height:80px}
     </div>
     <div class="fg"><label class="lbl">Identifiant</label>
       <input class="inp" id="l-user" type="text" placeholder="Votre username" autocomplete="username"
+        autocapitalize="none" autocorrect="off" spellcheck="false"
         onkeydown="if(event.key==='Enter')document.getElementById('l-pass').focus()" />
     </div>
     <div class="fg"><label class="lbl">Mot de passe</label>
@@ -1204,8 +1205,8 @@ textarea.inp{resize:vertical;min-height:80px}
     <div style="text-align:left"><div style="font-weight:600;font-size:13px">Photo de profil</div><div class="photo-zone-txt">Optionnel — appuyer pour choisir</div></div>
   </div>
   <input type="hidden" id="nu-photo-data" />
-  <div class="fg"><label class="lbl">Username *</label><input class="inp" id="nu-user" type="text" placeholder="ex: agent01" autocomplete="off" /></div>
-  <div class="fg"><label class="lbl">Mot de passe *</label><input class="inp" id="nu-pass" type="password" placeholder="••••••" /></div>
+  <div class="fg"><label class="lbl">Username *</label><input class="inp" id="nu-user" type="text" placeholder="ex: agent01" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" /></div>
+  <div class="fg"><label class="lbl">Mot de passe * (6 chiffres)</label><input class="inp" id="nu-pass" type="password" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="••••••" /></div>
   <div class="fg"><label class="lbl">Rôle *</label>
     <select class="sel" id="nu-role" onchange="onRoleChange()">
       <option value="Agent">Agent</option>
@@ -1242,7 +1243,7 @@ textarea.inp{resize:vertical;min-height:80px}
   </div>
   <input type="hidden" id="eu-photo-data" />
   <input type="hidden" id="eu-id" />
-  <div class="fg"><label class="lbl">Nouveau mot de passe</label><input class="inp" id="eu-pass" type="password" placeholder="Laisser vide = inchangé" /></div>
+  <div class="fg"><label class="lbl">Nouveau mot de passe (6 chiffres)</label><input class="inp" id="eu-pass" type="password" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="Laisser vide = inchangé" /></div>
   <div class="fg" id="eu-mgr-wrap"><label class="lbl">Manager assigné</label><select class="sel" id="eu-mgr"><option value="">— Aucun —</option></select></div>
   <button class="btn btn-i" style="width:100%;padding:12px;margin-top:4px" onclick="applyEditUser()">💾 Sauvegarder</button>
   <div id="eu-toggle-wrap" style="margin-top:8px">
@@ -3576,11 +3577,14 @@ window.doLogin=async()=>{
   try{
     const hash=await hashPw(pw);
     const users=DB.users();
+    const unLC=un.toLowerCase();
+    // Username insensible à la casse (minuscules/majuscules/mélange acceptés) —
+    // le mot de passe, lui, reste sensible à la casse comme avant.
     // Chercher d'abord par hash, puis par texte clair (migration)
-    let u=users.find(x=>x.username===un&&x.password===hash&&x.actif!==false);
+    let u=users.find(x=>x.username.toLowerCase()===unLC&&x.password===hash&&x.actif!==false);
     if(!u){
       // Tentative de compatibilité : mot de passe en clair (avant migration)
-      const uPlain=users.find(x=>x.username===un&&x.password===pw&&x.actif!==false);
+      const uPlain=users.find(x=>x.username.toLowerCase()===unLC&&x.password===pw&&x.actif!==false);
       if(uPlain){
         // Migrer ce mot de passe vers hash
         uPlain.password=hash;
@@ -3942,8 +3946,8 @@ window.createUser=async()=>{
   const mgr=document.getElementById('nu-mgr').value;
   const photoRaw=document.getElementById('nu-photo-data').value;
   if(!username||!password){toast('⚠️ Username et mot de passe requis');return;}
-  if(password.length<4){toast('⚠️ Mot de passe trop court (min 4 caractères)');return;}
-  if(DB.users().find(u=>u.username===username)){toast('⚠️ Username déjà utilisé');return;}
+  if(!/^\d{6}$/.test(password)){toast('⚠️ Le mot de passe doit être exactement 6 chiffres');return;}
+  if(DB.users().find(u=>u.username.toLowerCase()===username.toLowerCase())){toast('⚠️ Username déjà utilisé');return;}
   const hash=await hashPw(password);
   const uid_=uid('USR');
   const photo=await preparePhotoForSave(photoRaw, uid_);
@@ -4005,7 +4009,7 @@ window.applyEditUser=async()=>{
   const photo=photoRaw ? await preparePhotoForSave(photoRaw, u.id) : (u.photo||'');
   const patch={photo};
   if(pass){
-    if(pass.length<4){toast('⚠️ Mot de passe trop court');return;}
+    if(!/^\d{6}$/.test(pass)){toast('⚠️ Le mot de passe doit être exactement 6 chiffres');return;}
     patch.password=await hashPw(pass);
   }
   if(u.role==='Agent')patch.managerUsername=mgr;

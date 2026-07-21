@@ -1173,6 +1173,23 @@ textarea.inp{resize:vertical;min-height:80px}
   <button class="btn-ghost" style="margin-top:8px" onclick="closeSheet('sh-more-menu')">Fermer</button>
 </div>
 
+<!-- RECADRAGE PHOTO — partagé par tous les points d'upload (client, profil) -->
+<div class="overlay" id="ov-sh-photo-crop"></div>
+<div class="sheet" id="sh-photo-crop">
+  <div class="sh-handle"></div>
+  <div class="sh-title">🖼️ Recadrer la photo</div>
+  <div id="crop-viewport" style="width:240px;height:240px;max-width:100%;margin:0 auto 16px;border-radius:18px;overflow:hidden;background:#000;position:relative;border:2px solid var(--gold-border);touch-action:none;cursor:grab">
+    <img id="crop-img" src="" alt="" draggable="false" style="position:absolute;left:0;top:0;user-select:none;-webkit-user-drag:none;pointer-events:none" />
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+    <span style="font-size:15px;flex-shrink:0">🔍</span>
+    <input type="range" id="crop-zoom" min="100" max="300" value="100" style="flex:1" oninput="_cropOnZoom(this.value)">
+  </div>
+  <div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:16px">Glissez la photo pour la repositionner</div>
+  <button class="btn-gold" onclick="confirmPhotoCrop()">✅ Valider</button>
+  <button class="btn-ghost" style="margin-top:8px" onclick="cancelPhotoCrop()">Annuler</button>
+</div>
+
 <!-- ═══ SCANNER QR ═══ -->
 <div class="overlay" id="ov-sh-scanner" onclick="closeScanner()"></div>
 <div class="sheet" id="sh-scanner" style="max-height:92vh;overflow-y:auto;">
@@ -3014,15 +3031,29 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Auto-pull toutes les 3 minutes si en ligne
-setInterval(() => {
+// Auto-pull toutes les 90s si en ligne — c'était toutes les 3 min avec un
+// pull réel au mieux une fois sur deux (throttle à 5 min), donc jusqu'à
+// 10 minutes de retard possible sur les données des autres utilisateurs.
+function _autoSyncTick() {
   if (_SB_CONNECTED && navigator.onLine) {
     processOutbox().catch(() => {});
-    if (!window._lastPullTime || Date.now() - window._lastPullTime > 5 * 60 * 1000) {
+    if (!window._lastPullTime || Date.now() - window._lastPullTime > 90 * 1000) {
       _pullSheets().catch(() => {});
     }
   }
-}, 3 * 60 * 1000);
+}
+setInterval(_autoSyncTick, 90 * 1000);
+
+// Resynchroniser immédiatement dès que l'app revient au premier plan ou que
+// la connexion réseau revient — le cas le plus fréquent de "données en
+// retard" : l'app tourne en arrière-plan (minuteur souvent suspendu par le
+// système sur mobile), l'utilisateur la rouvre et voit des données
+// périmées jusqu'au prochain tic du minuteur, potentiellement minutes
+// après. Sans ces deux écouteurs, rien ne forçait un sync au retour.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') _autoSyncTick();
+});
+window.addEventListener('online', _autoSyncTick);
 
 // ════════════════════════════════════════════════════════════════════════════
 //  PAGINATION LOCALE (allège localStorage)
@@ -3923,53 +3954,145 @@ window.triggerGallery=(fid)=>{
   el.removeAttribute('capture');
   el.click();
 };
+// Applique le résultat du recadrage (ou, en repli, une compression simple)
+// aux éléments de prévisualisation propres à chaque formulaire.
+function _finalizePhotoPreview(compressed,prevId,dataId,icoId){
+  const kb=Math.round(compressed.length*3/4/1024);
+  toast('✅ Photo prête ('+kb+'KB)');
+  const prev=document.getElementById(prevId);
+  const ico =document.getElementById(icoId);
+  const data=document.getElementById(dataId);
+  if(data) data.value=compressed;
+  if(prev){ prev.src=compressed; prev.style.display='block'; }
+  if(ico) ico.style.display='none';
+  // nc: afficher preview, cacher boutons, mise à jour indicateurs
+  if(prevId==='nc-prev'){
+    const wrap=document.getElementById('nc-photo-preview-wrap');
+    const btns=document.getElementById('nc-photo-btns');
+    const ico2=document.getElementById('nc-ico');
+    if(wrap){ wrap.style.display='block'; }
+    if(btns) btns.style.display='none';
+    if(ico2) ico2.style.display='none';
+    const req=document.getElementById('nc-photo-req');
+    const ok2=document.getElementById('nc-photo-ok');
+    if(req) req.style.display='none';
+    if(ok2) ok2.style.display='block';
+  }
+  // eu: mettre à jour l'avatar
+  if(prevId==='eu-prev'){
+    if(ico){ ico.innerHTML='<img src="'+compressed+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px"/>'; ico.style.display='flex'; }
+    if(prev) prev.style.display='none';
+  }
+  // nu: mettre à jour l'avatar
+  if(prevId==='nu-prev'){
+    if(ico){ ico.innerHTML='<img src="'+compressed+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"/>'; ico.style.display='flex'; }
+  }
+}
+
+// ── Recadrage interactif — partagé par tous les points d'upload photo ──────
+// (Nouveau client, Nouvel utilisateur, Modifier profil) : plutôt que de
+// centrer/compresser automatiquement l'image sans contrôle, l'utilisateur
+// peut glisser et zoomer pour choisir précisément le cadrage avant de
+// valider — même comportement partout où une photo est ajoutée.
+let _cropState=null;
 window.applyPhotoPreview=(input,prevId,dataId,icoId)=>{
   const file=input.files[0]; if(!file) return;
-  if(file.size>15*1024*1024){ toast('⚠️ Fichier trop lourd (max 15Mo)'); return; }
-  toast('📷 Compression…');
+  if(file.size>15*1024*1024){ toast('⚠️ Fichier trop lourd (max 15Mo)'); input.value=''; return; }
   const img=new Image();
   const objUrl=URL.createObjectURL(file);
-  img.onerror=()=>{ URL.revokeObjectURL(objUrl); toast('⚠️ Impossible de lire l\'image'); };
+  img.onerror=()=>{ URL.revokeObjectURL(objUrl); toast('⚠️ Impossible de lire l\'image'); input.value=''; };
   img.onload=()=>{
     URL.revokeObjectURL(objUrl);
-    const MAX=400; let w=img.naturalWidth, h=img.naturalHeight;
-    if(w>MAX||h>MAX){ if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;} }
-    const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h;
-    canvas.getContext('2d').drawImage(img,0,0,w,h);
-    const compressed=canvas.toDataURL('image/jpeg',0.72);
-    const kb=Math.round(compressed.length*3/4/1024);
-    toast('✅ Photo prête ('+kb+'KB)');
-    const prev=document.getElementById(prevId);
-    const ico =document.getElementById(icoId);
-    const data=document.getElementById(dataId);
-    if(data) data.value=compressed;
-    if(prev){ prev.src=compressed; prev.style.display='block'; }
-    if(ico) ico.style.display='none';
-    // nc: afficher preview, cacher boutons, mise à jour indicateurs
-    if(prevId==='nc-prev'){
-      const wrap=document.getElementById('nc-photo-preview-wrap');
-      const btns=document.getElementById('nc-photo-btns');
-      const ico2=document.getElementById('nc-ico');
-      if(wrap){ wrap.style.display='block'; }
-      if(btns) btns.style.display='none';
-      if(ico2) ico2.style.display='none';
-      const req=document.getElementById('nc-photo-req');
-      const ok2=document.getElementById('nc-photo-ok');
-      if(req) req.style.display='none';
-      if(ok2) ok2.style.display='block';
-    }
-    // eu: mettre à jour l'avatar
-    if(prevId==='eu-prev'){
-      if(ico){ ico.innerHTML='<img src="'+compressed+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px"/>'; ico.style.display='flex'; }
-      if(prev) prev.style.display='none';
-    }
-    // nu: mettre à jour l'avatar
-    if(prevId==='nu-prev'){
-      if(ico){ ico.innerHTML='<img src="'+compressed+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"/>'; ico.style.display='flex'; }
-    }
+    _openPhotoCrop(img,input,prevId,dataId,icoId);
   };
   img.src=objUrl;
+};
+
+function _openPhotoCrop(img,input,prevId,dataId,icoId){
+  const VIEW=240;
+  const minScale=VIEW/Math.min(img.naturalWidth,img.naturalHeight);
+  _cropState={
+    img, input, prevId, dataId, icoId, VIEW, minScale,
+    scale:minScale,
+    offX:(VIEW-img.naturalWidth*minScale)/2,
+    offY:(VIEW-img.naturalHeight*minScale)/2,
+    dragging:false, startX:0, startY:0, startOffX:0, startOffY:0
+  };
+  const el=document.getElementById('crop-img');
+  el.src=img.src;
+  document.getElementById('crop-zoom').value=100;
+  _cropRender();
+  openSheet('sh-photo-crop');
 }
+function _cropClamp(){
+  const s=_cropState; if(!s) return;
+  const w=s.img.naturalWidth*s.scale, h=s.img.naturalHeight*s.scale;
+  s.offX=Math.min(0,Math.max(s.VIEW-w,s.offX));
+  s.offY=Math.min(0,Math.max(s.VIEW-h,s.offY));
+}
+function _cropRender(){
+  const s=_cropState; if(!s) return;
+  _cropClamp();
+  const el=document.getElementById('crop-img');
+  el.style.width=(s.img.naturalWidth*s.scale)+'px';
+  el.style.height=(s.img.naturalHeight*s.scale)+'px';
+  el.style.left=s.offX+'px';
+  el.style.top=s.offY+'px';
+}
+window._cropOnZoom=(val)=>{
+  const s=_cropState; if(!s) return;
+  const oldScale=s.scale;
+  s.scale=s.minScale*(Number(val)/100);
+  // Zoomer en gardant le centre du cadre visuellement stable
+  const cx=s.VIEW/2, cy=s.VIEW/2;
+  s.offX=cx-(cx-s.offX)*(s.scale/oldScale);
+  s.offY=cy-(cy-s.offY)*(s.scale/oldScale);
+  _cropRender();
+};
+(function initCropDrag(){
+  const vp=document.getElementById('crop-viewport');
+  if(!vp) return;
+  const onDown=(x,y)=>{
+    const s=_cropState; if(!s) return;
+    s.dragging=true; s.startX=x; s.startY=y; s.startOffX=s.offX; s.startOffY=s.offY;
+    vp.style.cursor='grabbing';
+  };
+  const onMove=(x,y)=>{
+    const s=_cropState; if(!s||!s.dragging) return;
+    s.offX=s.startOffX+(x-s.startX);
+    s.offY=s.startOffY+(y-s.startY);
+    _cropRender();
+  };
+  const onUp=()=>{
+    const s=_cropState; if(!s) return;
+    s.dragging=false; vp.style.cursor='grab';
+  };
+  vp.addEventListener('pointerdown',e=>{try{vp.setPointerCapture(e.pointerId);}catch(err){} onDown(e.clientX,e.clientY);});
+  vp.addEventListener('pointermove',e=>onMove(e.clientX,e.clientY));
+  vp.addEventListener('pointerup',onUp);
+  vp.addEventListener('pointercancel',onUp);
+})();
+window.confirmPhotoCrop=()=>{
+  const s=_cropState; if(!s) return;
+  toast('📷 Compression…');
+  const OUT=400;
+  const canvas=document.createElement('canvas'); canvas.width=OUT; canvas.height=OUT;
+  const ctx=canvas.getContext('2d');
+  const sx=-s.offX/s.scale, sy=-s.offY/s.scale, sSize=s.VIEW/s.scale;
+  ctx.drawImage(s.img,sx,sy,sSize,sSize,0,0,OUT,OUT);
+  const compressed=canvas.toDataURL('image/jpeg',0.72);
+  const {input,prevId,dataId,icoId}=s;
+  closeSheet('sh-photo-crop');
+  _cropState=null;
+  if(input) input.value='';
+  _finalizePhotoPreview(compressed,prevId,dataId,icoId);
+};
+window.cancelPhotoCrop=()=>{
+  const s=_cropState;
+  if(s&&s.input) s.input.value='';
+  _cropState=null;
+  closeSheet('sh-photo-crop');
+};
 window.clearPhotoNC=()=>{
   const get=id=>document.getElementById(id);
   const pd=get('nc-photo-data'); if(pd) pd.value='';

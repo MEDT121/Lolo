@@ -504,7 +504,7 @@ textarea.inp{resize:vertical;min-height:80px}
 .tr-cb{width:20px;height:20px;border-radius:6px;border:2px solid var(--gold-border);background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;transition:all .15s}
 .tr-dest-row.sel .tr-cb{background:var(--gold);border-color:var(--gold)}
 /* ADMIN EDIT BTN inline */
-.adm-edit-btn{font-size:11px;padding:5px 10px;background:rgba(201,160,48,.12);border:1px solid var(--gold-border);border-radius:8px;color:var(--gold);cursor:pointer;transition:background .15s;white-space:nowrap}
+.adm-edit-btn{font-size:11.5px;padding:7px 12px;background:rgba(201,160,48,.12);border:1px solid var(--gold-border);border-radius:8px;color:var(--gold);cursor:pointer;transition:background .15s;white-space:nowrap}
 .adm-edit-btn:active{background:var(--gold-pale)}
 /* NOTE BADGE */
 .note-badge{display:inline-flex;align-items:center;gap:4px;font-size:9px;background:rgba(224,153,51,.12);color:var(--warn);border:1px solid rgba(224,153,51,.25);border-radius:6px;padding:2px 7px;font-family:monospace;margin-top:3px}
@@ -660,7 +660,15 @@ textarea.inp{resize:vertical;min-height:80px}
         <div class="stat-c"><div class="stat-lbl">🪪 Cartes créées</div><div class="stat-val" style="color:var(--gold)" id="st-adm-carte">0</div></div>
         <div class="stat-c"><div class="stat-lbl">🔴 Inactifs</div><div class="stat-val" style="color:var(--muted)" id="st-adm-inact">0</div></div>
       </div>
-      <div class="sec-head"><div class="sec-title">Tous les Clients</div><div style="display:flex;gap:7px"><button style="background:linear-gradient(135deg,#128C7E,#25D366);color:#fff;border:none;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer" onclick="openWhatsApp()">📲 WhatsApp</button><button class="btn-gold" style="padding:9px 4px;font-size:11px;border-radius:10px;position:relative" onclick="openCartesAdmin()">🪪 Cartes<span id="carte-badge-count" style="display:none;position:absolute;top:-4px;right:-4px;background:#c9a030;color:#000;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:900;align-items:center;justify-content:center">0</span></button><button class="btn-gold" style="padding:7px 12px;font-size:12px" onclick="openVenteSheet()">💼 Vente</button><button class="btn btn-g" onclick="openSheet('sh-newclient')">+ Nouveau</button></div></div>
+      <div style="margin:14px 0 10px">
+        <div class="sec-title" style="margin-bottom:8px">Tous les Clients</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px">
+          <button class="btn" style="background:linear-gradient(135deg,#128C7E,#25D366);color:#fff;padding:9px 4px;font-size:11px" onclick="openWhatsApp()">📲 WhatsApp</button>
+          <button class="btn btn-g" style="padding:9px 4px;font-size:11px;position:relative" onclick="openCartesAdmin()">🪪 Cartes<span id="carte-badge-count" style="display:none;position:absolute;top:-4px;right:-4px;background:#c9a030;color:#000;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:900;align-items:center;justify-content:center">0</span></button>
+          <button class="btn btn-g" style="padding:9px 4px;font-size:11px" onclick="openVenteSheet()">💼 Vente</button>
+          <button class="btn btn-g" style="padding:9px 4px;font-size:11px" onclick="openSheet('sh-newclient')">+ Nouveau</button>
+        </div>
+      </div>
       <div class="srch-wrap"><span class="srch-ico">🔍</span><input class="srch-inp" type="search" placeholder="Chercher nom, agent, téléphone, activité..." oninput="renderAdminClients(this.value)" /></div>
       <div id="list-admin-clients"></div>
     </div>
@@ -832,7 +840,14 @@ textarea.inp{resize:vertical;min-height:80px}
 
     <!-- MANAGER: STOCK -->
     <div class="panel" id="panel-mgr-stock">
-      <div class="sec-head"><div class="sec-title">📦 Mon Stock</div><div style="display:flex;gap:6px"><button class="btn btn-i" onclick="openSheet('sh-stock-mgr')">→ Agent</button><button class="btn" style="background:rgba(229,85,85,.08);border:1px solid rgba(229,85,85,.25);color:var(--danger);padding:7px 10px;font-size:11px" onclick="openRetourStockMgr()">↩️ Retour</button><button class="btn" style="background:rgba(201,160,48,.1);border:1px solid rgba(201,160,48,.3);color:var(--gold);padding:7px 10px;font-size:11px" onclick="exportStockCSV()">📊 CSV</button></div></div>
+      <div style="margin:14px 0 10px">
+        <div class="sec-title" style="margin-bottom:8px">📦 Mon Stock</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px">
+          <button class="btn btn-i" style="padding:9px 4px;font-size:11px" onclick="openSheet('sh-stock-mgr')">→ Agent</button>
+          <button class="btn" style="background:rgba(229,85,85,.08);border:1px solid rgba(229,85,85,.25);color:var(--danger);padding:9px 4px;font-size:11px" onclick="openRetourStockMgr()">↩️ Retour</button>
+          <button class="btn" style="background:rgba(201,160,48,.1);border:1px solid rgba(201,160,48,.3);color:var(--gold);padding:9px 4px;font-size:11px" onclick="exportStockCSV()">📊 CSV</button>
+        </div>
+      </div>
       <div class="sec-lbl">Solde par produit</div>
       <div id="list-mgr-solde"></div>
       <div class="divider"></div>
@@ -3991,7 +4006,7 @@ function renderUsers(){
         <div style="font-size:10px;color:var(--muted);margin-top:1px">${u.managerUsername?'→ '+u.managerUsername:u.role}</div>
         ${suspended&&orphans>0?`<div style="font-size:10px;color:var(--danger);font-weight:700;margin-top:3px">⚠️ ${orphans} client(s) sans agent</div>`:''}
       </div>
-      <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0">
+      <div style="display:flex;flex-direction:column;gap:9px;align-items:flex-end;flex-shrink:0">
         <div style="display:flex;gap:5px;align-items:center">
           <span class="role-pill r${u.role.replace(/\s/g,'')}">${u.role.slice(0,3)}</span>
           <span class="badge ${!suspended?'b-actif':'b-inactif'}">${!suspended?'✓ Actif':'✗ Suspendu'}</span>
@@ -4305,7 +4320,7 @@ function calcScoreRisque(clientId) {
 
   // Blacklist manuelle = réponse immédiate
   if (c.flagManuel === 'blacklist')
-    return { score:100, niveau:'blacklist', label:'⛔ Blacklisté', couleur:'var(--danger)', icone:'⛔', details:'Signalé manuellement comme blacklisté.' };
+    return { score:100, niveau:'blacklist', label:'⛔ Blacklisté', couleur:'var(--danger)', icone:'⛔', details:['Signalé manuellement comme blacklisté.'] };
 
   const ventes  = DB.ventes().filter(v => v.clientID === clientId);
   const tousPayments = DB.pays();
@@ -4498,11 +4513,11 @@ window.renderRisque = function() {
           ${reste>0?`<div style="font-size:12px;font-weight:700;color:${r.couleur};margin-top:5px">💰 Reste dû : ${fmtFC(reste)}</div>`:''}
           ${c.noteInterne?`<div style="font-size:11px;color:var(--muted);font-style:italic;background:var(--bg3);border-radius:8px;padding:6px 9px;margin-top:7px;line-height:1.5">📝 ${c.noteInterne.split('\n').filter(Boolean).pop()||c.noteInterne}</div>`:''}
           ${r.details.length?`<div style="margin-top:8px;display:flex;flex-direction:column;gap:3px">${r.details.slice(0,3).map(d=>`<div style="font-size:10px;color:var(--muted);display:flex;gap:5px;align-items:center"><span>${d}</span></div>`).join('')}</div>`:''}
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
-            ${canFlag?`<button class="btn" style="font-size:11px;padding:6px 10px;background:rgba(229,85,85,.1);border:1px solid rgba(229,85,85,.3);color:var(--danger)" onclick="openFlagClient('${c.id}')">✏️ Modifier</button>`:''}
-            <button class="btn btn-g" style="font-size:11px;padding:6px 10px" onclick="openClientHistorique('${c.id}')">📋 Historique</button>
-            ${c.telephone&&reste>0?`<button class="btn" style="font-size:11px;padding:6px 10px;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);color:#25D366" onclick="openRappelWA('${DB.ventes().filter(v=>v.clientID===c.id).sort((a,b)=>b.dateCreation.localeCompare(a.dateCreation))[0]?.id||''}')">📲 WA</button>`:''}
-            <button class="btn btn-g" style="font-size:11px;padding:6px 10px" onclick="openClientCard('${c.id}')">🪪 Carte</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+            ${canFlag?`<button class="btn" style="font-size:11px;padding:7px 11px;background:rgba(229,85,85,.1);border:1px solid rgba(229,85,85,.3);color:var(--danger)" onclick="openFlagClient('${c.id}')">✏️ Modifier</button>`:''}
+            <button class="btn btn-g" style="font-size:11px;padding:7px 11px" onclick="openClientHistorique('${c.id}')">📋 Historique</button>
+            ${c.telephone&&reste>0?`<button class="btn" style="font-size:11px;padding:7px 11px;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);color:#25D366" onclick="openRappelWA('${DB.ventes().filter(v=>v.clientID===c.id).sort((a,b)=>b.dateCreation.localeCompare(a.dateCreation))[0]?.id||''}')">📲 WA</button>`:''}
+            <button class="btn btn-g" style="font-size:11px;padding:7px 11px" onclick="openClientCard('${c.id}')">🪪 Carte</button>
           </div>
         </div>
       </div>
@@ -5068,9 +5083,9 @@ function renderDashboardAdmin(){
         <div style="font-size:10px;color:var(--muted)">📦 ${v.produit} · ${v.agentUsername} · +${joursRet}j retard</div></div>
         <div style="text-align:right">
           <div style="font-weight:700;color:var(--danger);font-size:12px">${fmtFC(reste)}</div>
-          <div style="display:flex;gap:4px;margin-top:3px;justify-content:flex-end">
-          ${c?.telephone?`<button class="btn" style="font-size:9px;padding:3px 7px;background:rgba(37,211,102,.12);color:#25D366;border:1px solid rgba(37,211,102,.3)" onclick="openRappelWA('${v.id}')">📲 WA</button>`:''}
-          ${c?.id?`<button class="btn" style="font-size:9px;padding:3px 7px;background:rgba(100,160,240,.1);color:var(--info);border:1px solid rgba(100,160,240,.3)" onclick="openClientHistorique('${c.id}')">📋</button>`:''}
+          <div style="display:flex;gap:7px;margin-top:6px;justify-content:flex-end">
+          ${c?.telephone?`<button class="btn" style="font-size:10px;padding:5px 9px;background:rgba(37,211,102,.12);color:#25D366;border:1px solid rgba(37,211,102,.3)" onclick="openRappelWA('${v.id}')">📲 WA</button>`:''}
+          ${c?.id?`<button class="btn" style="font-size:10px;padding:5px 9px;background:rgba(100,160,240,.1);color:var(--info);border:1px solid rgba(100,160,240,.3)" onclick="openClientHistorique('${c.id}')">📋</button>`:''}
           </div>
         </div>
       </div>`;
@@ -5095,7 +5110,7 @@ function renderDashboardAdmin(){
         risques.map(({c,r})=>`<div class="stk-row" style="background:rgba(229,85,85,.04);border:1px solid rgba(229,85,85,.18);border-radius:8px;margin-bottom:5px">
           <div><div style="font-weight:700;font-size:13px">${r.icone} ${c.nomComplet}</div>
           <div style="font-size:10px;color:var(--muted)">👤 ${c.agentUsername} · score ${r.score}/100 · ${r.niveau==='blacklist'?'⛔ Blacklist':r.label}</div></div>
-          <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
             <button class="btn" style="font-size:9px;padding:3px 7px;background:rgba(229,85,85,.1);border:1px solid rgba(229,85,85,.3);color:var(--danger)" onclick="openFlagClient('${c.id}')">✏️</button>
             <button class="btn btn-g" style="font-size:9px;padding:3px 7px" onclick="openClientHistorique('${c.id}')">📋</button>
           </div>
@@ -5390,7 +5405,7 @@ function clientCardAdmin(c){
           ${statusBadge}${carteBadge}${actifBadge}${riskBadge(c.id)}
         </div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0;padding-left:8px">
+      <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;flex-shrink:0;padding-left:8px">
         ${ventes.length>0?`<div style="font-family:'Cinzel',serif;font-size:13px;color:var(--gold-l);font-weight:700">${fmtFC(totalPaye)}</div><div style="font-size:9px;color:var(--danger)">reste ${fmtFC(Math.max(0,totalDu-totalPaye))}</div>`:''}
         <div style="font-size:18px;color:var(--muted);margin-top:2px">›</div>
       </div>
@@ -5463,7 +5478,7 @@ function renderAdminVentes(q=''){
           <div style="font-size:10px;color:var(--gold);font-family:monospace;margin-top:2px">👤 ${v.agentUsername}${v.venduPar&&v.venduPar!==v.agentUsername?' · vendu: '+v.venduPar:''} · fin: ${v.dateFin}</div>
           ${statBadge}
         </div>
-        <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0">
+        <div style="display:flex;flex-direction:column;gap:9px;align-items:flex-end;flex-shrink:0">
           <div style="font-family:'Cinzel',serif;font-size:15px;color:var(--gold-l);font-weight:700">${fmtFC(v.montantTotal)}</div>
           <button class="adm-edit-btn" onclick="openCorrection('vente','${v.id}',null)">✏️ Modifier</button>
           ${reste>0?`<button class="adm-edit-btn" style="color:var(--success)" onclick="adminAddPay('${v.id}')">💳 Paiement</button>`:''}
@@ -5496,7 +5511,7 @@ function renderAdminMv(){
         <div style="font-size:11px;color:var(--muted);margin-top:3px">📍${c.lieuActivite||'—'} · 💼${c.activite||'—'}</div>
         <div style="font-size:10px;color:var(--gold);font-family:monospace;margin-top:3px">Agent: ${c.agentUsername} · ${c.dateCreation?.split('T')[0]||''}</div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+      <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
         <span class="badge ${c.carteCreee==='PDF'?'b-oui':c.carteCreee==='Oui'?'b-oui':'b-non'}">${c.carteCreee==='PDF'?'📄 PNG':c.carteCreee==='Oui'?'🪪 OK':'⏳'}</span>
         <button class="adm-edit-btn" onclick="openCorrection('client','${c.id}',null)">✏️</button>
         <button class="adm-edit-btn" style="color:var(--info)" onclick="openClientCard('${c.id}')">🪪</button>
@@ -5504,7 +5519,7 @@ function renderAdminMv(){
     </div></div>`).join(''):empty('Aucun client');
   document.getElementById('adm-vt').innerHTML=vts.length?vts.slice().reverse().map(v=>{const c=allCls.find(x=>x.id===v.clientID);
     return`<div class="mv-row"><div class="mv-top"><div><div style="font-family:monospace;font-size:9px;color:var(--muted)">${v.id}</div><div style="font-weight:700;font-size:13px;margin-top:2px">${c?.nomComplet||v.clientID}</div><div style="font-size:11px;color:var(--muted);margin-top:3px">📦${v.produit}</div><div style="font-size:10px;color:var(--gold);font-family:monospace;margin-top:3px">Agent: ${v.agentUsername}${v.venduPar&&v.venduPar!==v.agentUsername?' · Vendu par: '+v.venduPar:''}</div></div>
-    <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+    <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
       <div style="font-family:'Cinzel',serif;font-size:15px;color:var(--gold-l);font-weight:700">${fmtFC(v.montantTotal)}</div>
       <button class="adm-edit-btn" onclick="openCorrection('vente','${v.id}',null)">✏️</button>
       <button class="adm-edit-btn" style="color:var(--success)" onclick="adminAddPay('${v.id}')">💳</button>
@@ -5512,7 +5527,7 @@ function renderAdminMv(){
   }).join(''):empty('Aucune vente');
   document.getElementById('adm-py').innerHTML=pys.length?pys.slice().reverse().map(p=>{const v=allVts.find(x=>x.id===p.venteID);const c=v?allCls.find(x=>x.id===v.clientID):null;
     return`<div class="mv-row"><div class="mv-top"><div><div style="font-family:monospace;font-size:9px;color:var(--muted)">${p.id}</div><div style="font-weight:700;font-size:13px;margin-top:2px">${c?.nomComplet||'—'}</div><div style="font-size:11px;color:var(--muted);margin-top:3px">${p.datePaiement} · Vente: ${p.venteID}</div><div style="font-size:10px;color:var(--gold);font-family:monospace;margin-top:3px">Agent: ${p.agentUsername}</div></div>
-    <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+    <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
       <div style="font-family:'Cinzel',serif;font-size:15px;color:var(--gold-l);font-weight:700">${fmtFC(p.montantPaye)}</div>
       <button class="adm-edit-btn" onclick="openCorrection('paiement','${p.id}',null)">✏️</button>
       ${(()=>{const pVte=v?DB.pays().filter(x=>x.venteID===v.id).reduce((s,x)=>s+Number(x.montantPaye||0),0):0;const pReste=v?Math.max(0,Number(v.solde70||0)-pVte):0;return pReste>0?`<button class="adm-edit-btn" style="color:var(--success)" onclick="adminAddPay('${v?.id||''}')">💳</button>`:''})()}
@@ -5520,7 +5535,7 @@ function renderAdminMv(){
   }).join(''):empty('Aucun paiement');
   document.getElementById('adm-st').innerHTML=stk.length?stk.slice().reverse().map(s=>`
     <div class="stk-row"><div><div style="font-weight:700">${s.produit}</div><div class="stk-flow">${s.sourceUsername} → ${s.destUsername} · ${s.dateMouvement?.split('T')[0]||''}</div>${s.prixUnitaire?`<div style="font-size:10px;color:var(--gold)">${fmtFC(s.prixUnitaire)}/u · Total: ${fmtFC(s.prixUnitaire*s.quantite)}</div>`:''}</div>
-    <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+    <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
       <div class="stk-qty">+${s.quantite}</div>
       <div style="display:flex;gap:4px">
         <button class="adm-edit-btn" onclick="openCorrection('stock','${s.id}',null)">✏️</button>
@@ -5971,7 +5986,7 @@ function renderMgrMesClients(q=''){
           <div style="font-size:10px;color:var(--muted);margin-top:2px">📍${c.lieuActivite||'—'}${c.telephone?` · 📞${c.telephone}`:''}</div>
           <div style="margin-top:5px;display:flex;gap:5px;flex-wrap:wrap">${badge}</div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0">
+        <div style="display:flex;flex-direction:column;gap:9px;align-items:flex-end;flex-shrink:0">
           ${totalDu>0?`<div style="font-family:'Cinzel',serif;font-size:13px;color:var(--gold-l);font-weight:700">${fmtFC(totalPaye)}</div><div style="font-size:10px;color:var(--danger)">-${fmtFC(resteTot)}</div>`:''}
           <button class="btn-gold" style="font-size:11px;padding:6px 10px;white-space:nowrap" onclick="mgrQuickVente('${c.id}')">💼 Vente</button>
           ${enc>0?`<button class="btn btn-g" style="font-size:11px;padding:6px 10px;white-space:nowrap" onclick="mgrEncaisser('${c.id}')">💳</button>`:''}
@@ -6196,7 +6211,7 @@ function renderMgrStock(){
       return`<div class="stk-row">
         <div><div style="font-weight:700;font-size:13px">${s.produit}</div>
         <div class="stk-flow" style="font-size:11px">${s.sourceUsername} → ${s.destUsername} · ${s.dateMouvement?.split('T')[0]||''}</div></div>
-        <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end">
+        <div style="display:flex;flex-direction:column;gap:7px;align-items:flex-end">
           <div class="stk-qty" style="color:${isIn?'var(--success)':'var(--danger)'}">
             <div>${isIn?'+':'-'}${s.quantite}</div><div style="font-size:9px">${isIn?'Reçu':'Envoyé'}</div></div>
           ${sigBtn('stock',s.id)}
@@ -6400,7 +6415,7 @@ function renderAgtPays(){
         <div class="hist-top">
           <div class="av-lg">${avH(cl?.photo,cl?.nomComplet)}</div>
           <div class="hist-info"><div class="hist-nm">${cl?.nomComplet||'—'}</div><div class="hist-pr">📦 ${v.produit} · ${v.dateDebut} → ${v.dateFin}</div></div>
-          <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+          <div style="display:flex;flex-direction:column;gap:9px;align-items:flex-end">
             ${reste<=0?`<span class="badge b-oui">✓ Soldé</span>`:`<button class="btn btn-g" style="font-size:11px;padding:6px 10px" onclick="openPayFromVente('${v.id}')">💳</button>`}
             ${reste>0&&today()>v.dateFin&&cl?.telephone?`<button class="btn" style="font-size:10px;padding:4px 8px;background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.3);color:#25D366" onclick="openRappelWA('${v.id}')">📲</button>`:''}
             ${sigBtn('vente',v.id)}
@@ -8897,7 +8912,7 @@ function clientCardMgr(c){
           <span style="font-size:10px;padding:2px 7px;border-radius:6px;${c.actif?'background:rgba(34,197,94,.12);color:#22c55e':'background:rgba(229,85,85,.10);color:var(--danger)'}">${c.actif?'🟢 Actif':'🔴 Inactif'}</span>
         </div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0;padding-left:8px">
+      <div style="display:flex;flex-direction:column;gap:9px;align-items:flex-end;flex-shrink:0;padding-left:8px">
         ${ventes.length>0?`<div style="font-family:'Cinzel',serif;font-size:13px;color:var(--gold-l);font-weight:700">${fmtFC(totalPaye)}</div><div style="font-size:10px;color:var(--danger)">-${fmtFC(Math.max(0,totalDu-totalPaye))}</div>`:''}
         ${venteBtn}${encBtn}
         <button class="btn btn-g" style="font-size:10px;padding:5px 8px;white-space:nowrap" onclick="event.stopPropagation();openClientCard('${c.id}')">🪪 Carte</button>
@@ -8963,7 +8978,7 @@ function venteCard(v,withSig=false){
         <div style="font-size:11px;color:var(--muted);margin-top:2px">📦 ${v.produit}</div>
         <div style="font-size:10px;color:var(--gold);font-family:monospace;margin-top:3px">Agent: ${v.agentUsername}${tag}</div>
       </div>
-      <div style="text-align:right;display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+      <div style="text-align:right;display:flex;flex-direction:column;gap:9px;align-items:flex-end">
         <div style="font-family:'Cinzel',serif;font-size:16px;color:var(--gold-l);font-weight:700">${fmtFC(v.montantTotal)}</div>
         <div style="font-size:10px;color:var(--muted)">${v.dateDebut} → ${v.dateFin}</div>
         ${(()=>{const dp=DB.pays().filter(p=>p.venteID===v.id).reduce((s,p)=>s+Number(p.montantPaye||0),0);const reste=Math.max(0,Number(v.solde70||0)-dp);return reste>0&&(SESSION?.role==='Agent'||SESSION?.role==='Manager')?`<button class="btn btn-g" style="font-size:10px;padding:5px 9px;white-space:nowrap" onclick="event.stopPropagation();openPayFromVente('${v.id}')">💳</button>`:'';})()}
@@ -9370,7 +9385,7 @@ window.renderArchives=function renderArchives(){
               Archivé le ${a.archiveLe?.split('T')[0]||'?'} par ${a.archivePar||'Admin'}
             </div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0">
+          <div style="display:flex;flex-direction:column;gap:9px;align-items:flex-end;flex-shrink:0">
             <div class="arch-size">${a.nbLignes}</div>
             <button class="btn" style="font-size:9px;padding:4px 8px;border:1px solid var(--gold-border);background:var(--bg3);color:var(--muted)" onclick="restaurerArchive('${a.id}')">♻️ Restaurer</button>
             <button class="btn" style="font-size:9px;padding:4px 8px;border:1px solid rgba(224,85,85,.3);background:rgba(224,85,85,.08);color:var(--danger)" onclick="supprimerArchive('${a.id}')">🗑️</button>
